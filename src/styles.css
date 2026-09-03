@@ -1,0 +1,120 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Chowly design system — Candy Playful direction.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes. Custom direction tokens (cream, ink, coral, bubble, mint,
+ * butter, sky) are defined in :root and exposed as utilities.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-coral: var(--coral);
+  --color-bubble: var(--bubble);
+  --color-mint: var(--mint);
+  --color-butter: var(--butter);
+  --color-sky: var(--sky);
+
+  --font-display: "Fredoka", sans-serif;
+  --font-body: "Nunito", sans-serif;
+}
+
+:root {
+  --radius: 1.5rem;
+
+  --cream: #fff8f1;
+  --ink: #4a3b33;
+  --coral: #ff8e7a;
+  --bubble: #ffc6d0;
+  --mint: #bce7d6;
+  --butter: #ffe08a;
+  --sky: #bfe0ff;
+
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--coral);
+  --primary-foreground: var(--cream);
+  --secondary: var(--bubble);
+  --secondary-foreground: var(--ink);
+  --muted: var(--butter);
+  --muted-foreground: #8b7b70;
+  --accent: var(--mint);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: color-mix(in srgb, var(--ink) 10%, transparent);
+  --input: color-mix(in srgb, var(--ink) 10%, transparent);
+  --ring: var(--coral);
+}
+
+.dark {
+  --background: var(--ink);
+  --foreground: var(--cream);
+  --card: #5c4d45;
+  --card-foreground: var(--cream);
+  --popover: #5c4d45;
+  --popover-foreground: var(--cream);
+  --primary: var(--coral);
+  --primary-foreground: var(--cream);
+  --secondary: #6b5c54;
+  --secondary-foreground: var(--cream);
+  --muted: #6b5c54;
+  --muted-foreground: #c4b8ae;
+  --accent: var(--mint);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: color-mix(in srgb, var(--cream) 15%, transparent);
+  --input: color-mix(in srgb, var(--cream) 15%, transparent);
+  --ring: var(--coral);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+  }
+}
