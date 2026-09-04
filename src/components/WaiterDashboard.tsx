@@ -23,7 +23,7 @@ export const WaiterDashboard = () => {
     if (orderErr) console.error('Error fetching orders:', orderErr);
     else setOrders(orderData || []);
 
-    // 2. Fetch employees
+    // 2. Fetch staff using generated table 'employees'
     const { data: employeeData, error: empErr } = await (supabase
       .from('employees') as any)
       .select('*, employee_roles(role_name)');
@@ -56,10 +56,10 @@ export const WaiterDashboard = () => {
       return;
     }
 
-    // Update order status to 'Served' (checking both 'id' and 'order_id')
+    // Update order status to 'Served'
     const { error: updateErr } = await (supabase
       .from('orders') as any)
-      .update({ order_status: 'Served', status: 'Served' })
+      .update({ order_status: 'Served' })
       .or(`id.eq.${orderId},order_id.eq.${orderId}`);
 
     if (updateErr) {
