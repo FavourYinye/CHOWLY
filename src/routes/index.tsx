@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
 import { WaiterDashboard } from '@/components/WaiterDashboard';
 
-export default function Index() {
+export const Route = createFileRoute('/')({
+  component: IndexPage,
+});
+
+function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
 
   return (
@@ -38,3 +43,5 @@ export default function Index() {
     </div>
   );
 }
+
+export default IndexPage;
