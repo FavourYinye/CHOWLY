@@ -5,7 +5,7 @@ export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
-// Updated Menu Data
+// Menu Data
 const MENU_ITEMS = [
   { id: '1', name: 'Jollof Rice & Grilled Chicken', price: 14.99, category: 'Mains', prepTime: '15 mins', image: '🍗', color: 'bg-amber-100' },
   { id: '2', name: 'Amala & Ewedu', price: 16.50, category: 'Mains', prepTime: '15 mins', image: '🍲', color: 'bg-stone-200' },
@@ -17,7 +17,7 @@ const MENU_ITEMS = [
   { id: '8', name: 'Bottled Natural Spring Water', price: 2.00, category: 'Drinks', prepTime: '1 min', image: '💧', color: 'bg-sky-100' },
 ];
 
-// Updated Initial Active Orders
+// Initial Active Orders
 const INITIAL_ORDERS = [
   {
     id: 'ORD-101',
@@ -76,6 +76,9 @@ function IndexPage() {
     : MENU_ITEMS.filter((i) => i.category === selectedCategory);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
+
+  // Dynamic estimated wait time based on item count
+  const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : '~15 Mins';
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
@@ -213,11 +216,13 @@ function IndexPage() {
                     </div>
                     <div className="flex justify-between text-slate-600 text-xs">
                       <span>Estimated Wait Time:</span>
-                      <span className="font-semibold text-slate-800">~15 Mins</span>
+                      <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        {estimatedWaitTime}
+                      </span>
                     </div>
                     <button
                       onClick={() => {
-                        alert('Order Placed Successfully!');
+                        alert(`Order Placed Successfully! Estimated time: ${estimatedWaitTime}`);
                         setCart([]);
                       }}
                       className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition shadow"
