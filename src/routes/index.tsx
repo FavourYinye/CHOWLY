@@ -32,13 +32,17 @@ function IndexPage() {
 
   // Checkout & Payment State
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card');
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  
+  // Exit Pass Visibility Controls
   const [activeExitPass, setActiveExitPass] = useState<{
     orderIds: string[];
     timestamp: string;
     table: string;
     total: string;
   } | null>(null);
+  const [isExitPassMinimized, setIsExitPassMinimized] = useState<boolean>(false);
 
   // Live Timer for Animated Verification Element
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -67,6 +71,9 @@ function IndexPage() {
     if (cart.length === 0) return;
 
     const newOrderId = `ORD-${Math.floor(100 + Math.random() * 900)}`;
+    const now = new Date();
+    const formattedTimestamp = `${now.toLocaleDateString()} at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
     const newOrder = {
       id: newOrderId,
       customer: 'Table 4 (You)',
@@ -81,6 +88,7 @@ function IndexPage() {
       total: cartTotal,
       status: 'Submitted',
       prepTime: estimatedWaitTime,
+      timestamp: formattedTimestamp,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -88,7 +96,7 @@ function IndexPage() {
     setCart([]);
   };
 
-  // 2. Customer Cancels Order (Only permitted while status is 'Submitted')
+  // 2. Customer Cancels Order
   const handleCustomerCancel = (orderId: string) => {
     setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
     setCustomerOrderIds((prev) => prev.filter((id) => id !== orderId));
@@ -129,13 +137,14 @@ function IndexPage() {
         prev.map((ord) => (ord.id === checkoutOrderId ? { ...ord, status: 'Completed' } : ord))
       );
 
-      // Generate Exit Pass
+      // Generate Exit Pass & Expand
       setActiveExitPass({
         orderIds: [checkoutOrderId],
         timestamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
         table: paidOrder?.table || 'Table 4',
         total: paidOrder?.total || '0.00',
       });
+      setIsExitPassMinimized(false);
 
       setIsProcessingPayment(false);
       setCheckoutOrderId(null);
@@ -155,9 +164,9 @@ function IndexPage() {
   const orderBeingPaid = orders.find((o) => o.id === checkoutOrderId);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans pb-16">
       {/* Navigation Header */}
-      <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
+      <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">C</div>
           <h1 className="text-2xl font-extrabold tracking-tight text-white">CHOWLY</h1>
@@ -194,7 +203,10 @@ function IndexPage() {
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
                   <h2 className="text-2xl font-extrabold text-slate-900">Checkout & Payment</h2>
-                  <p className="text-xs text-slate-500">Order Ref: {checkoutOrderId} • Table 4</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ref: <span className="font-mono font-bold">{checkoutOrderId}</span> • Table 4
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">📅 Date/Time: {orderBeingPaid?.timestamp}</p>
                 </div>
                 <button
                   onClick={() => setCheckoutOrderId(null)}
@@ -225,18 +237,24 @@ function IndexPage() {
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="border-2 border-amber-500 bg-amber-50/50 rounded-xl p-3 text-left font-bold text-xs text-amber-900 flex items-center gap-2">
-                    💳 Credit / Debit Card
-                  </button>
-                  <button className="border rounded-xl p-3 text-left font-bold text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-                    📲 Pay via USSD / Transfer
-                  </button>
-                  <button className="border rounded-xl p-3 text-left font-bold text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-                    🍏 Apple / Google Pay
-                  </button>
-                  <button className="border rounded-xl p-3 text-left font-bold text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-                    💵 Cash to Waiter
-                  </button>
+                  {[
+                    { id: 'card', label: '💳 Credit / Debit Card' },
+                    { id: 'ussd', label: '📲 USSD / Bank Transfer' },
+                    { id: 'wallet', label: '🍏 Apple / Google Pay' },
+                    { id: 'cash', label: '💵 Cash to Waiter' },
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedPaymentMethod(method.id)}
+                      className={`border-2 rounded-xl p-3 text-left font-bold text-xs transition flex items-center gap-2 ${
+                        selectedPaymentMethod === method.id
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -301,7 +319,10 @@ function IndexPage() {
                 {/* CART VIEW */}
                 <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                   <div className="flex justify-between items-center border-b pb-3">
-                    <h2 className="text-xl font-bold text-slate-900">Cart</h2>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Cart</h2>
+                      <p className="text-[10px] text-slate-400 font-medium">Table 4 • Session Active</p>
+                    </div>
                     {cart.length > 0 && <button onClick={clearCart} className="text-xs font-bold text-red-500">Clear All</button>}
                   </div>
                   {cart.length === 0 ? (
@@ -339,12 +360,9 @@ function IndexPage() {
                   )}
                 </div>
 
-                {/* DIGITAL EXIT PASS MODAL / CARD */}
-                {activeExitPass && (
+                {/* DIGITAL EXIT PASS (FULL VIEW) */}
+                {activeExitPass && !isExitPassMinimized && (
                   <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 text-white shadow-2xl border-2 border-emerald-500/50 space-y-5 relative overflow-hidden">
-                    {/* Pulsing Radar Background Effect */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl animate-pulse pointer-events-none" />
-
                     <div className="flex justify-between items-start border-b border-slate-800 pb-3">
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">CHOWLY OFFICIAL PASS</span>
@@ -356,10 +374,9 @@ function IndexPage() {
                       </span>
                     </div>
 
-                    {/* QR Code Simulation with Center Checkmark */}
+                    {/* QR Code Simulation */}
                     <div className="bg-white p-4 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-900 border-4 border-emerald-500">
                       <div className="relative w-36 h-36 bg-slate-950 rounded-xl p-2 flex items-center justify-center">
-                        {/* QR Code Mock Pattern */}
                         <div className="w-full h-full border-2 border-dashed border-emerald-400/60 rounded flex items-center justify-center text-slate-700 text-[10px] text-center font-mono p-1">
                           [VERIFIED-QR-PASS]
                         </div>
@@ -390,7 +407,7 @@ function IndexPage() {
                       </div>
                     </div>
 
-                    {/* Animated Verification Bar (Prevents Screenshots) */}
+                    {/* Animated Verification Bar */}
                     <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -400,10 +417,31 @@ function IndexPage() {
                     </div>
 
                     <button
-                      onClick={() => setActiveExitPass(null)}
-                      className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-xl text-xs font-bold transition"
+                      onClick={() => setIsExitPassMinimized(true)}
+                      className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
                     >
-                      Hide Exit Pass
+                      <span>🔽 Minimize Exit Pass</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* COLLAPSED EXIT PASS TOOLBAR */}
+                {activeExitPass && isExitPassMinimized && (
+                  <div className="bg-emerald-900 border-2 border-emerald-400 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-xl text-white shadow">
+                        ✓
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-emerald-300">Exit Pass Active</h4>
+                        <p className="text-xs font-bold text-white">{activeExitPass.orderIds.join(', ')} • Table 4</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsExitPassMinimized(false)}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl text-xs font-black transition shadow"
+                    >
+                      🔍 Show Pass
                     </button>
                   </div>
                 )}
@@ -417,8 +455,11 @@ function IndexPage() {
 
                     {activeCustomerOrders.map((ord) => (
                       <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-                        <div className="border-b pb-3 flex justify-between items-center">
-                          <h2 className="text-lg font-bold text-slate-900">Order Tracker</h2>
+                        <div className="border-b pb-3 flex justify-between items-start">
+                          <div>
+                            <h2 className="text-lg font-bold text-slate-900">Order Tracker</h2>
+                            <p className="text-[11px] text-slate-400 font-medium">📅 Order Date: {ord.timestamp}</p>
+                          </div>
                           <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">
                             {ord.id}
                           </span>
@@ -458,14 +499,24 @@ function IndexPage() {
                           </div>
                           
                           <p className="text-xs text-slate-600 pt-1">
-                            {ord.status === 'Submitted' && "Sent to kitchen. You can still cancel."}
-                            {ord.status === 'Assigned' && "Order items assigned to kitchen/bar staff."}
-                            {ord.status === 'Preparing' && "Food is cooking! Cancellation is now locked."}
-                            {ord.status === 'Ready' && "Your order is ready! Proceed to pay bill."}
-                            {ord.status === 'Served' && "Food served to Table 4! Pay bill to obtain Exit Pass."}
+                            {ord.status === 'Submitted' && "Order received by kitchen. You can pay anytime."}
+                            {ord.status === 'Assigned' && "Order items assigned to staff. You can pay anytime."}
+                            {ord.status === 'Preparing' && "Food is cooking! You can pay anytime."}
+                            {ord.status === 'Ready' && "Your order is ready!"}
+                            {ord.status === 'Served' && "Food served to Table 4!"}
                             {ord.status === 'Completed' && "Order paid & cleared! Show Exit Pass at door."}
                           </p>
                         </div>
+
+                        {/* IMMEDIATE PAYMENT TRIGGER (AVAILABLE AT ALL STAGES) */}
+                        {ord.status !== 'Completed' && (
+                          <button
+                            onClick={() => setCheckoutOrderId(ord.id)}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md flex justify-center items-center gap-2"
+                          >
+                            💳 Pay Bill Now (${ord.total})
+                          </button>
+                        )}
 
                         {/* CANCELLATION LOGIC */}
                         {ord.status === 'Submitted' ? (
@@ -476,21 +527,11 @@ function IndexPage() {
                             Cancel Order
                           </button>
                         ) : (
-                          ord.status !== 'Ready' && ord.status !== 'Served' && ord.status !== 'Completed' && (
+                          ord.status !== 'Completed' && (
                             <p className="text-[11px] text-center text-slate-400 italic">
                               🔒 Order in progress. Speak to your waiter for changes.
                             </p>
                           )
-                        )}
-
-                        {/* Payment Action Trigger */}
-                        {(ord.status === 'Ready' || ord.status === 'Served') && (
-                          <button
-                            onClick={() => setCheckoutOrderId(ord.id)}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md flex justify-center items-center gap-2 animate-bounce"
-                          >
-                            💳 Pay Bill (${ord.total}) & Exit
-                          </button>
                         )}
 
                         {/* Completion Notice */}
@@ -531,6 +572,7 @@ function IndexPage() {
                 const allItemsAssigned = ord.items.every((it: any) => it.assignedStaff !== 'Unassigned');
                 const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
                 const isServedUnpaid = ord.status === 'Served';
+                const isCompleted = ord.status === 'Completed';
 
                 return (
                   <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4 relative">
@@ -546,6 +588,7 @@ function IndexPage() {
                       <div>
                         <span className="text-xs font-bold text-slate-400">{ord.id}</span>
                         <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
+                        <p className="text-[11px] text-slate-400 font-medium">📅 Ordered: {ord.timestamp}</p>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
                         ord.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
@@ -576,10 +619,12 @@ function IndexPage() {
                                 </span>
                               </div>
 
+                              {/* RESTRICTED SELECTOR IF ORDER IS COMPLETED */}
                               <select
                                 value={it.assignedStaff}
+                                disabled={isCompleted}
                                 onChange={(e) => handleAssignItemStaff(ord.id, it.id, e.target.value)}
-                                className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm outline-none"
+                                className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                               >
                                 <option value="Unassigned">Assign Staff...</option>
                                 {staffOptions.map((code) => (
@@ -592,39 +637,44 @@ function IndexPage() {
                       </div>
                     </div>
 
-                    {/* STATUS UPDATE SECTION */}
-                    {ord.status !== 'Completed' && (
-                      <div className="pt-3 border-t">
-                        <label className="text-xs font-bold text-slate-600 block mb-1">Update Order Status:</label>
-                        <select
-                          value={ord.status}
-                          onChange={(e) => handleUpdateStatus(ord.id, e.target.value)}
-                          className="w-full bg-slate-50 border text-sm rounded-xl p-2.5 font-semibold text-slate-800"
-                        >
-                          <option value="Submitted">Submitted (Pending Assignment)</option>
-                          
-                          <option value="Assigned" disabled={!allItemsAssigned}>
-                            Assigned {!allItemsAssigned ? '(Assign all items first)' : ''}
-                          </option>
+                    {/* STATUS UPDATE SECTION (DISABLED WHEN COMPLETED) */}
+                    <div className="pt-3 border-t">
+                      <label className="text-xs font-bold text-slate-600 block mb-1">Update Order Status:</label>
+                      <select
+                        value={ord.status}
+                        disabled={isCompleted}
+                        onChange={(e) => handleUpdateStatus(ord.id, e.target.value)}
+                        className="w-full bg-slate-50 border text-sm rounded-xl p-2.5 font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="Submitted">Submitted (Pending Assignment)</option>
+                        
+                        <option value="Assigned" disabled={!allItemsAssigned}>
+                          Assigned {!allItemsAssigned ? '(Assign all items first)' : ''}
+                        </option>
 
-                          <option value="Preparing" disabled={!isAssignedOrBeyond}>
-                            Preparing {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
-                          </option>
-                          
-                          <option value="Ready" disabled={!isAssignedOrBeyond}>
-                            Ready {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
-                          </option>
+                        <option value="Preparing" disabled={!isAssignedOrBeyond}>
+                          Preparing {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
+                        </option>
+                        
+                        <option value="Ready" disabled={!isAssignedOrBeyond}>
+                          Ready {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
+                        </option>
 
-                          <option value="Served" disabled={!isAssignedOrBeyond}>
-                            Served (Awaits Customer Payment)
-                          </option>
+                        <option value="Served" disabled={!isAssignedOrBeyond}>
+                          Served (Awaits Customer Payment)
+                        </option>
 
-                          <option value="Completed" disabled={ord.status !== 'Completed'}>
-                            Completed (Auto-updates upon Customer Payment)
-                          </option>
+                        <option value="Completed">
+                          Completed (Paid & Cleared)
+                        </option>
 
-                          <option value="Cancelled">Cancelled (Void)</option>
-                        </select>
+                        <option value="Cancelled">Cancelled (Void)</option>
+                      </select>
+                    </div>
+
+                    {isCompleted && (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-center text-xs font-bold">
+                        🔒 Order Completed & Paid — Lock Applied
                       </div>
                     )}
                   </div>
