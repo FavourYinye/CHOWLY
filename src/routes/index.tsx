@@ -35,7 +35,7 @@ function IndexPage() {
   const clearCart = () => setCart([]);
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
-  const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : '~15 Mins';
+  const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : cart.length > 0 ? '~15 Mins' : '0 Mins';
 
   // --- ORDER LIFECYCLE HANDLERS --- //
 
@@ -198,7 +198,14 @@ function IndexPage() {
                           <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">✕</button>
                         </div>
                       ))}
-                      <div className="pt-4 space-y-3">
+                      
+                      {/* ESTIMATED WAIT TIME ON CART */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center text-xs">
+                        <span className="font-medium text-amber-900">⏱️ Est. Wait Time:</span>
+                        <span className="font-bold text-amber-900 bg-amber-100 px-2 py-1 rounded-md">{estimatedWaitTime}</span>
+                      </div>
+
+                      <div className="pt-2 space-y-3">
                         <div className="flex justify-between font-bold text-slate-900 text-lg">
                           <span>Total:</span>
                           <span className="text-amber-600">${cartTotal}</span>
@@ -247,8 +254,15 @@ function IndexPage() {
                   }`}>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</span>
                     <p className="text-2xl font-black text-slate-900">{activeCustomerOrder.status}</p>
+
+                    {/* ESTIMATED WAIT TIME ON TRACKING CARD */}
+                    <div className="pt-1">
+                      <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-flex items-center gap-1 border border-amber-200">
+                        ⏱️ Est. Wait: {activeCustomerOrder.prepTime}
+                      </span>
+                    </div>
                     
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-slate-600 pt-1">
                       {activeCustomerOrder.status === 'Submitted' && "Sent to kitchen. You can still cancel."}
                       {activeCustomerOrder.status === 'Assigned' && `Assigned to ${activeCustomerOrder.assignedStaff}.`}
                       {activeCustomerOrder.status === 'Preparing' && "Food is cooking! Cancellation is now locked."}
