@@ -181,13 +181,13 @@ function IndexPage() {
               {/* CART VIEW */}
               <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                 <div className="flex justify-between items-center border-b pb-3">
-                  <h2 className="text-xl font-bold text-slate-900">New Order Cart</h2>
+                  <h2 className="text-xl font-bold text-slate-900">Cart</h2>
                   {cart.length > 0 && <button onClick={clearCart} className="text-xs font-bold text-red-500">Clear All</button>}
                 </div>
                 {cart.length === 0 ? (
                   <div className="text-center py-6 text-slate-400">
                     <p className="text-3xl mb-1">🛒</p>
-                    <p className="text-xs">Select items above to start a new order.</p>
+                    <p className="text-xs">Select items above to start an order.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -213,7 +213,7 @@ function IndexPage() {
                         <span className="text-amber-600">${cartTotal}</span>
                       </div>
                       <button onClick={handlePlaceOrder} className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition">
-                        Place Additional Order
+                        Place Order
                       </button>
                     </div>
                   </div>
