@@ -5,15 +5,19 @@ export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
-// Sample Menu Data
+// Updated Menu Data
 const MENU_ITEMS = [
-  { id: '1', name: 'Jollof Rice & Grilled Chicken', price: '$14.99', category: 'Mains', prepTime: '15 mins', image: '🍗', color: 'bg-amber-100' },
-  { id: '2', name: 'Pounded Yam & Egusi Soup', price: '$18.50', category: 'Mains', prepTime: '20 mins', image: '🍲', color: 'bg-orange-100' },
-  { id: '3', name: 'Suya Platter Extra Spice', price: '$12.00', category: 'Appetizers', prepTime: '10 mins', image: '🍢', color: 'bg-red-100' },
-  { id: '4', name: 'Chilled Zobo Drink', price: '$4.50', category: 'Drinks', prepTime: '3 mins', image: '🍹', color: 'bg-purple-100' },
+  { id: '1', name: 'Jollof Rice & Grilled Chicken', price: 14.99, category: 'Mains', prepTime: '15 mins', image: '🍗', color: 'bg-amber-100' },
+  { id: '2', name: 'Amala & Ewedu', price: 16.50, category: 'Mains', prepTime: '15 mins', image: '🍲', color: 'bg-stone-200' },
+  { id: '3', name: 'Suya Platter Extra Spice', price: 12.00, category: 'Appetizers', prepTime: '10 mins', image: '🍢', color: 'bg-red-100' },
+  { id: '4', name: 'Chilled Zobo Drink', price: 4.50, category: 'Drinks', prepTime: '3 mins', image: '🍹', color: 'bg-purple-100' },
+  { id: '5', name: 'Classic Nigerian Chapman', price: 5.50, category: 'Drinks', prepTime: '5 mins', image: '🍸', color: 'bg-rose-100' },
+  { id: '6', name: 'Fresh Palm Wine', price: 6.00, category: 'Drinks', prepTime: '2 mins', image: '🍶', color: 'bg-emerald-100' },
+  { id: '7', name: 'Ice-Cold Malt Drink', price: 3.50, category: 'Drinks', prepTime: '2 mins', image: '🥤', color: 'bg-yellow-100' },
+  { id: '8', name: 'Bottled Natural Spring Water', price: 2.00, category: 'Drinks', prepTime: '1 min', image: '💧', color: 'bg-sky-100' },
 ];
 
-// Initial Active Orders for Demonstration
+// Updated Initial Active Orders
 const INITIAL_ORDERS = [
   {
     id: 'ORD-101',
@@ -23,25 +27,39 @@ const INITIAL_ORDERS = [
     status: 'In Kitchen',
     prepTime: '15 mins',
     assignedStaff: 'Chef Musa',
-    role: 'Chef',
   },
   {
     id: 'ORD-102',
     customer: 'Table 2 (Sarah)',
-    items: ['Pounded Yam & Egusi Soup'],
-    total: '$18.50',
+    items: ['Amala & Ewedu', 'Classic Nigerian Chapman'],
+    total: '$22.00',
     status: 'Preparing',
-    prepTime: '20 mins',
+    prepTime: '15 mins',
     assignedStaff: 'Unassigned',
-    role: 'Unassigned',
   },
 ];
 
 function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
   const [orders, setOrders] = useState(INITIAL_ORDERS);
-  const [cart, setCart] = useState<{ id: string; name: string; price: string }[]>([]);
+  const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  // Add Item to Cart
+  const addToCart = (item: typeof MENU_ITEMS[0]) => {
+    const cartItem = { ...item, cartId: `${item.id}-${Date.now()}` };
+    setCart((prev) => [...prev, cartItem]);
+  };
+
+  // Remove Single Item from Cart
+  const removeFromCart = (cartId: string) => {
+    setCart((prev) => prev.filter((item) => item.cartId !== cartId));
+  };
+
+  // Clear Entire Cart
+  const clearCart = () => {
+    setCart([]);
+  };
 
   // Handle Staff Assignment in Waiter View
   const handleAssignStaff = (orderId: string, staffName: string) => {
@@ -52,15 +70,12 @@ function IndexPage() {
     );
   };
 
-  // Handle Adding Items to Cart
-  const addToCart = (item: typeof MENU_ITEMS[0]) => {
-    setCart((prev) => [...prev, item]);
-  };
-
   const categories = ['All', 'Mains', 'Appetizers', 'Drinks'];
   const filteredItems = selectedCategory === 'All' 
     ? MENU_ITEMS 
     : MENU_ITEMS.filter((i) => i.category === selectedCategory);
+
+  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
@@ -101,7 +116,7 @@ function IndexPage() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
-          /* FULL COLORFUL CUSTOMER INTERFACE */
+          /* CUSTOMER INTERFACE */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Menu Items Grid */}
             <div className="lg:col-span-2 space-y-6">
@@ -140,7 +155,7 @@ function IndexPage() {
                       <p className="text-xs text-slate-500 mt-1">Est. prep time: {item.prepTime}</p>
                     </div>
                     <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                      <span className="text-xl font-black text-slate-900">{item.price}</span>
+                      <span className="text-xl font-black text-slate-900">${item.price.toFixed(2)}</span>
                       <button
                         onClick={() => addToCart(item)}
                         className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-4 py-2 rounded-xl text-sm font-bold transition shadow-sm"
@@ -155,7 +170,18 @@ function IndexPage() {
 
             {/* Right: Order Summary Sidebar */}
             <div className="bg-white rounded-2xl p-6 border shadow-sm h-fit space-y-4">
-              <h2 className="text-xl font-bold text-slate-900 border-b pb-3">Your Order Summary</h2>
+              <div className="flex justify-between items-center border-b pb-3">
+                <h2 className="text-xl font-bold text-slate-900">Your Order</h2>
+                {cart.length > 0 && (
+                  <button
+                    onClick={clearCart}
+                    className="text-xs font-bold text-red-500 hover:text-red-700 transition"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
               {cart.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
                   <p className="text-4xl mb-2">🛒</p>
@@ -164,19 +190,36 @@ function IndexPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {cart.map((cartItem, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm border-b pb-2">
-                      <span className="font-medium text-slate-800">{cartItem.name}</span>
-                      <span className="font-bold text-slate-900">{cartItem.price}</span>
+                  {cart.map((cartItem) => (
+                    <div key={cartItem.cartId} className="flex justify-between items-center text-sm border-b pb-2">
+                      <div>
+                        <p className="font-medium text-slate-800">{cartItem.name}</p>
+                        <p className="text-xs font-bold text-slate-500">${cartItem.price.toFixed(2)}</p>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(cartItem.cartId)}
+                        className="text-slate-400 hover:text-red-600 transition p-1 text-sm font-bold"
+                        title="Remove Item"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ))}
-                  <div className="pt-4 border-t space-y-2">
-                    <div className="flex justify-between text-slate-600 text-sm">
+
+                  <div className="pt-4 border-t space-y-3">
+                    <div className="flex justify-between items-center text-base font-bold text-slate-900">
+                      <span>Total Price:</span>
+                      <span className="text-amber-600">${cartTotal}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 text-xs">
                       <span>Estimated Wait Time:</span>
-                      <span className="font-semibold text-amber-600">~15 Mins</span>
+                      <span className="font-semibold text-slate-800">~15 Mins</span>
                     </div>
                     <button
-                      onClick={() => alert('Order Placed Successfully!')}
+                      onClick={() => {
+                        alert('Order Placed Successfully!');
+                        setCart([]);
+                      }}
                       className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold text-sm transition shadow"
                     >
                       Place Order
@@ -187,7 +230,7 @@ function IndexPage() {
             </div>
           </div>
         ) : (
-          /* WAITER DASHBOARD WITH ACTIVE ORDERS */
+          /* WAITER DASHBOARD */
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-white p-6 rounded-2xl border shadow-sm">
               <div>
