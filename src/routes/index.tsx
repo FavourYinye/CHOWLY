@@ -5,6 +5,10 @@ export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
+// Staff Role Options
+const CHEF_OPTIONS = ['CHF01', 'CHF02', 'CHF03', 'CHF04', 'CHF05'];
+const BARTENDER_OPTIONS = ['BAR01', 'BAR02', 'BAR03', 'BAR04', 'BAR05'];
+
 // Menu Data
 const MENU_ITEMS = [
   { id: '1', name: 'Jollof Rice & Grilled Chicken', price: 14.99, category: 'Mains', prepTime: '15 mins', image: '🍗', color: 'bg-amber-100' },
@@ -20,7 +24,7 @@ const MENU_ITEMS = [
 function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
   const [orders, setOrders] = useState<any[]>([]);
-  const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number }[]>([]);
+  const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   
   // Track multiple active customer order IDs for Table 4
@@ -47,11 +51,16 @@ function IndexPage() {
     const newOrder = {
       id: newOrderId,
       customer: 'Table 4 (You)',
-      items: cart.map((item) => ({ name: item.name, price: item.price })),
+      items: cart.map((item) => ({
+        id: item.cartId,
+        name: item.name,
+        price: item.price,
+        category: item.category,
+        assignedStaff: 'Unassigned', // Item-level staff assignment
+      })),
       total: cartTotal,
       status: 'Submitted',
       prepTime: estimatedWaitTime,
-      assignedStaff: 'Unassigned',
     };
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -65,27 +74,29 @@ function IndexPage() {
     setCustomerOrderIds((prev) => prev.filter((id) => id !== orderId));
   };
 
-  // 3. Waiter Assigns Staff -> Automatically sets status to 'Assigned' if currently 'Submitted'
-  const handleAssignStaff = (orderId: string, staffName: string) => {
+  // 3. Waiter Assigns Staff to a Specific Item in an Order
+  const handleAssignItemStaff = (orderId: string, itemId: string, staffCode: string) => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
-          const newStatus = staffName !== 'Unassigned' && ord.status === 'Submitted' ? 'Assigned' : ord.status;
-          return { ...ord, assignedStaff: staffName, status: newStatus };
+          const updatedItems = ord.items.map((item: any) =>
+            item.id === itemId ? { ...item, assignedStaff: staffCode } : item
+          );
+          return { ...ord, items: updatedItems };
         }
         return ord;
       })
     );
   };
 
-  // 4. Waiter updates status (Preparing, Ready, Cancelled)
+  // 4. Waiter Updates Overall Order Status
   const handleUpdateStatus = (orderId: string, newStatus: string) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
     );
   };
 
-  // 5. Customer settles payment when order is Ready
+  // 5. Customer Settles Payment -> Sets Status to Completed
   const handleMakePayment = (orderId: string) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, status: 'Completed' } : ord))
@@ -273,7 +284,7 @@ function IndexPage() {
                         
                         <p className="text-xs text-slate-600 pt-1">
                           {ord.status === 'Submitted' && "Sent to kitchen. You can still cancel."}
-                          {ord.status === 'Assigned' && `Assigned to ${ord.assignedStaff}.`}
+                          {ord.status === 'Assigned' && "Order items assigned to kitchen/bar staff."}
                           {ord.status === 'Preparing' && "Food is cooking! Cancellation is now locked."}
                           {ord.status === 'Ready' && "Your order is served! Please proceed to pay."}
                         </p>
@@ -331,67 +342,107 @@ function IndexPage() {
             <div className="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Waiter Dashboard</h2>
-                <p className="text-sm text-slate-500 mt-1">Manage kitchen dispatch and table updates.</p>
+                <p className="text-sm text-slate-500 mt-1">Assign items to specific staff and update kitchen status.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {orders.length === 0 && <p className="text-slate-500">No active orders found.</p>}
               
-              {orders.map((ord) => (
-                <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
-                  <div className="flex justify-between border-b pb-3">
-                    <div>
-                      <span className="text-xs font-bold text-slate-400">{ord.id}</span>
-                      <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
-                    </div>
-                    <span className="bg-slate-100 text-slate-800 text-xs font-bold px-2 py-1 rounded">
-                      {ord.status}
-                    </span>
-                  </div>
+              {orders.map((ord) => {
+                // Check if ALL items in this order have an assigned staff
+                const allItemsAssigned = ord.items.every((it: any) => it.assignedStaff !== 'Unassigned');
+                // Check if order was already marked as Assigned, Preparing, or Ready
+                const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Completed'].includes(ord.status);
 
-                  <ul className="text-sm font-medium text-slate-700 space-y-1">
-                    {ord.items.map((it: any, i: number) => (
-                      <li key={i}>• {it.name}</li>
-                    ))}
-                  </ul>
-
-                  {ord.status !== 'Completed' && (
-                    <div className="pt-4 border-t grid grid-cols-2 gap-4">
-                      {/* Staff Dropdown */}
+                return (
+                  <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
+                    <div className="flex justify-between border-b pb-3">
                       <div>
-                        <label className="text-xs font-bold text-slate-600 block mb-1">Assigned Staff:</label>
-                        <select
-                          value={ord.assignedStaff}
-                          onChange={(e) => handleAssignStaff(ord.id, e.target.value)}
-                          className="w-full bg-slate-50 border text-sm rounded-lg p-2 font-medium"
-                        >
-                          <option value="Unassigned">Unassigned</option>
-                          <option value="Chef Musa">Chef Musa</option>
-                          <option value="Chef Amaka">Chef Amaka</option>
-                          <option value="Bartender David">Bartender David</option>
-                        </select>
+                        <span className="text-xs font-bold text-slate-400">{ord.id}</span>
+                        <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
                       </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
+                        ord.status === 'Ready' ? 'bg-emerald-100 text-emerald-800' :
+                        ord.status === 'Preparing' ? 'bg-blue-100 text-blue-800' :
+                        ord.status === 'Assigned' ? 'bg-purple-100 text-purple-800' :
+                        ord.status === 'Completed' ? 'bg-green-100 text-green-900' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {ord.status}
+                      </span>
+                    </div>
 
-                      {/* Status Dropdown */}
-                      <div>
-                        <label className="text-xs font-bold text-slate-600 block mb-1">Update Status:</label>
+                    {/* ITEM-BY-ITEM ASSIGNMENT TABLE */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Order Items & Staff Assignment</p>
+                      <div className="bg-slate-50 rounded-xl p-3 border space-y-3">
+                        {ord.items.map((it: any) => {
+                          const isDrink = it.category === 'Drinks';
+                          const staffOptions = isDrink ? BARTENDER_OPTIONS : CHEF_OPTIONS;
+
+                          return (
+                            <div key={it.id} className="flex items-center justify-between gap-2 border-b last:border-b-0 pb-2 last:pb-0">
+                              <div className="flex-1">
+                                <span className="text-xs font-semibold text-slate-800 block">{it.name}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {it.category} ({isDrink ? 'Bartender' : 'Chef'})
+                                </span>
+                              </div>
+
+                              {/* Dropdown specific to item category */}
+                              <select
+                                value={it.assignedStaff}
+                                onChange={(e) => handleAssignItemStaff(ord.id, it.id, e.target.value)}
+                                className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                              >
+                                <option value="Unassigned">Assign Staff...</option>
+                                {staffOptions.map((code) => (
+                                  <option key={code} value={code}>{code}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* STATUS UPDATE SECTION */}
+                    {ord.status !== 'Completed' && (
+                      <div className="pt-3 border-t">
+                        <label className="text-xs font-bold text-slate-600 block mb-1">Update Order Status:</label>
                         <select
                           value={ord.status}
                           onChange={(e) => handleUpdateStatus(ord.id, e.target.value)}
-                          className="w-full bg-slate-50 border text-sm rounded-lg p-2 font-medium"
+                          className="w-full bg-slate-50 border text-sm rounded-xl p-2.5 font-semibold text-slate-800"
                         >
-                          <option value="Submitted">Submitted</option>
-                          <option value="Assigned">Assigned</option>
-                          <option value="Preparing">Preparing</option>
-                          <option value="Ready">Ready</option>
+                          <option value="Submitted">Submitted (Pending Assignment)</option>
+                          
+                          {/* ASSIGNED option requires all items to be assigned */}
+                          <option value="Assigned" disabled={!allItemsAssigned}>
+                            Assigned {!allItemsAssigned ? '(Assign all items first)' : ''}
+                          </option>
+
+                          {/* PREPARING & READY options require order to be at least Assigned */}
+                          <option value="Preparing" disabled={!isAssignedOrBeyond}>
+                            Preparing {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
+                          </option>
+                          <option value="Ready" disabled={!isAssignedOrBeyond}>
+                            Ready {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
+                          </option>
+
+                          {/* COMPLETED option is only enabled if customer paid */}
+                          <option value="Completed" disabled={ord.status !== 'Completed'}>
+                            Completed (Awaits Customer Payment)
+                          </option>
+
                           <option value="Cancelled">Cancelled (Void)</option>
                         </select>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
