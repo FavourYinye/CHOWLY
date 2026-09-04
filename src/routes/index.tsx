@@ -21,21 +21,63 @@ const MENU_ITEMS = [
   { id: '8', name: 'Bottled Natural Spring Water', price: 2.00, category: 'Drinks', prepTime: '1 min', image: '💧', color: 'bg-sky-100' },
 ];
 
+export interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  assignedStaff: string; // Tracks assigned staff ID / employeeRoleId
+}
+
+export interface Order {
+  id: string;
+  customer: string;
+  table: string;
+  items: OrderItem[];
+  total: string;
+  status: string;
+  prepTime: string;
+  timestamp: string;
+  isPaid: boolean;
+}
+
 function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
-  const [orders, setOrders] = useState<any[]>([]);
   const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  
-  // Track multiple active customer order IDs for Table 4
-  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>([]);
+
+  // 1. LOCALSTORAGE PERSISTENT STATES
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chowly_orders');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chowly_customer_order_ids');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  // Save to localStorage on changes
+  useEffect(() => {
+    localStorage.setItem('chowly_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem('chowly_customer_order_ids', JSON.stringify(customerOrderIds));
+  }, [customerOrderIds]);
 
   // Checkout & Payment State
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card');
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-  
-  // Exit Pass Visibility Controls
+
+  // Exit Pass Controls
   const [activeExitPass, setActiveExitPass] = useState<{
     orderIds: string[];
     timestamp: string;
@@ -44,7 +86,7 @@ function IndexPage() {
   } | null>(null);
   const [isExitPassMinimized, setIsExitPassMinimized] = useState<boolean>(false);
 
-  // Live Timer for Animated Verification Element
+  // Live Timer for Verification Element
   const [currentTime, setCurrentTime] = useState<string>('');
   useEffect(() => {
     const timer = setInterval(() => {
@@ -66,7 +108,7 @@ function IndexPage() {
 
   // --- ORDER LIFECYCLE HANDLERS --- //
 
-  // 1. Customer Places Order -> Status: Submitted
+  // Place Order
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
 
@@ -74,7 +116,7 @@ function IndexPage() {
     const now = new Date();
     const formattedTimestamp = `${now.toLocaleDateString()} at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    const newOrder = {
+    const newOrder: Order = {
       id: newOrderId,
       customer: 'Table 4 (You)',
       table: 'Table 4',
@@ -89,6 +131,7 @@ function IndexPage() {
       status: 'Submitted',
       prepTime: estimatedWaitTime,
       timestamp: formattedTimestamp,
+      isPaid: false,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -96,18 +139,17 @@ function IndexPage() {
     setCart([]);
   };
 
-  // 2. Customer Cancels Order
   const handleCustomerCancel = (orderId: string) => {
     setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
     setCustomerOrderIds((prev) => prev.filter((id) => id !== orderId));
   };
 
-  // 3. Waiter Assigns Staff to a Specific Item in an Order
+  // Waiter Assigns Employee Role / Staff Code to an Item
   const handleAssignItemStaff = (orderId: string, itemId: string, staffCode: string) => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
-          const updatedItems = ord.items.map((item: any) =>
+          const updatedItems = ord.items.map((item) =>
             item.id === itemId ? { ...item, assignedStaff: staffCode } : item
           );
           return { ...ord, items: updatedItems };
@@ -117,32 +159,49 @@ function IndexPage() {
     );
   };
 
-  // 4. Waiter Updates Overall Order Status
+  // Waiter Updates Status
   const handleUpdateStatus = (orderId: string, newStatus: string) => {
     setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
+      prev.map((ord) => {
+        if (ord.id !== orderId) return ord;
+
+        // If marked Served and customer has already paid, complete automatically
+        let finalStatus = newStatus;
+        if (newStatus === 'Served' && ord.isPaid) {
+          finalStatus = 'Completed';
+        }
+
+        return { ...ord, status: finalStatus };
+      })
     );
   };
 
-  // 5. Payment Flow: Processing Checkout & Generating Exit Pass
+  // Process Payment
   const handleProcessPayment = () => {
     if (!checkoutOrderId) return;
     setIsProcessingPayment(true);
 
     setTimeout(() => {
       const paidOrder = orders.find((o) => o.id === checkoutOrderId);
-      
-      // Update order status to Completed
+      if (!paidOrder) return;
+
+      // Determine new status: if already served, finalize to Completed, otherwise mark isPaid=true
+      const nextStatus = paidOrder.status === 'Served' ? 'Completed' : paidOrder.status;
+
       setOrders((prev) =>
-        prev.map((ord) => (ord.id === checkoutOrderId ? { ...ord, status: 'Completed' } : ord))
+        prev.map((ord) =>
+          ord.id === checkoutOrderId
+            ? { ...ord, isPaid: true, status: nextStatus }
+            : ord
+        )
       );
 
-      // Generate Exit Pass & Expand
+      // Generate Digital Exit Pass
       setActiveExitPass({
         orderIds: [checkoutOrderId],
         timestamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
-        table: paidOrder?.table || 'Table 4',
-        total: paidOrder?.total || '0.00',
+        table: paidOrder.table || 'Table 4',
+        total: paidOrder.total,
       });
       setIsExitPassMinimized(false);
 
@@ -151,15 +210,13 @@ function IndexPage() {
     }, 1500);
   };
 
-  // Dismiss completed order card from customer view
   const handleDismissOrder = (orderId: string) => {
     setCustomerOrderIds((prev) => prev.filter((id) => id !== orderId));
   };
 
   const categories = ['All', 'Mains', 'Appetizers', 'Drinks'];
   const filteredItems = selectedCategory === 'All' ? MENU_ITEMS : MENU_ITEMS.filter((i) => i.category === selectedCategory);
-  
-  // Active customer orders filter
+
   const activeCustomerOrders = orders.filter((o) => customerOrderIds.includes(o.id));
   const orderBeingPaid = orders.find((o) => o.id === checkoutOrderId);
 
@@ -172,7 +229,6 @@ function IndexPage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-white">CHOWLY</h1>
         </div>
 
-        {/* View Switcher Toggle */}
         <div className="bg-slate-800 p-1 rounded-xl flex gap-1 border border-slate-700">
           <button
             onClick={() => setActiveRole('customer')}
@@ -196,9 +252,8 @@ function IndexPage() {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
-          /* CUSTOMER INTERFACE */
           checkoutOrderId ? (
-            /* PAYMENT / CHECKOUT TAB */
+            /* CHECKOUT & MULTI-PAYMENT PAGE */
             <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border shadow-lg space-y-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
@@ -216,11 +271,10 @@ function IndexPage() {
                 </button>
               </div>
 
-              {/* Order Summary */}
               <div className="bg-slate-50 p-4 rounded-2xl border space-y-2">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Order Items</h3>
                 <div className="space-y-1.5 text-sm">
-                  {orderBeingPaid?.items.map((it: any, i: number) => (
+                  {orderBeingPaid?.items.map((it, i) => (
                     <div key={i} className="flex justify-between text-slate-700">
                       <span>{it.name}</span>
                       <span className="font-semibold">${it.price.toFixed(2)}</span>
@@ -233,7 +287,7 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Payment Method Selector */}
+              {/* Multi-Payment Selection */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -258,7 +312,6 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Pay Action Button */}
               <button
                 onClick={handleProcessPayment}
                 disabled={isProcessingPayment}
@@ -274,9 +327,8 @@ function IndexPage() {
               </button>
             </div>
           ) : (
-            /* CATALOG & ACTIVE ORDERS VIEW */
+            /* CATALOG & TRACKER VIEW */
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left: Food Catalog */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {categories.map((cat) => (
@@ -314,9 +366,8 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Right: Cart & Active Orders Column */}
+              {/* Cart & Active Tracking */}
               <div className="space-y-6">
-                {/* CART VIEW */}
                 <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                   <div className="flex justify-between items-center border-b pb-3">
                     <div>
@@ -341,7 +392,7 @@ function IndexPage() {
                           <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">✕</button>
                         </div>
                       ))}
-                      
+
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center text-xs">
                         <span className="font-medium text-amber-900">⏱️ Est. Wait Time:</span>
                         <span className="font-bold text-amber-900 bg-amber-100 px-2 py-1 rounded-md">{estimatedWaitTime}</span>
@@ -360,7 +411,7 @@ function IndexPage() {
                   )}
                 </div>
 
-                {/* DIGITAL EXIT PASS (FULL VIEW) */}
+                {/* DIGITAL EXIT PASS */}
                 {activeExitPass && !isExitPassMinimized && (
                   <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 text-white shadow-2xl border-2 border-emerald-500/50 space-y-5 relative overflow-hidden">
                     <div className="flex justify-between items-start border-b border-slate-800 pb-3">
@@ -374,7 +425,6 @@ function IndexPage() {
                       </span>
                     </div>
 
-                    {/* QR Code Simulation */}
                     <div className="bg-white p-4 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-900 border-4 border-emerald-500">
                       <div className="relative w-36 h-36 bg-slate-950 rounded-xl p-2 flex items-center justify-center">
                         <div className="w-full h-full border-2 border-dashed border-emerald-400/60 rounded flex items-center justify-center text-slate-700 text-[10px] text-center font-mono p-1">
@@ -387,7 +437,6 @@ function IndexPage() {
                       <p className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Scan at Door / Show Waiter</p>
                     </div>
 
-                    {/* Pass Details */}
                     <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-2 text-xs">
                       <div className="flex justify-between text-slate-300">
                         <span>Order IDs Covered:</span>
@@ -407,7 +456,6 @@ function IndexPage() {
                       </div>
                     </div>
 
-                    {/* Animated Verification Bar */}
                     <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -425,7 +473,7 @@ function IndexPage() {
                   </div>
                 )}
 
-                {/* COLLAPSED EXIT PASS TOOLBAR */}
+                {/* MINIMIZED PASS */}
                 {activeExitPass && isExitPassMinimized && (
                   <div className="bg-emerald-900 border-2 border-emerald-400 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -446,7 +494,7 @@ function IndexPage() {
                   </div>
                 )}
 
-                {/* ACTIVE ORDERS LIST */}
+                {/* ACTIVE CUSTOMER ORDERS TRACKER */}
                 {activeCustomerOrders.length > 0 && (
                   <div className="space-y-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-1">
@@ -465,11 +513,10 @@ function IndexPage() {
                           </span>
                         </div>
 
-                        {/* Items Summary */}
                         <div className="bg-slate-50 p-3 rounded-xl border space-y-1.5">
                           <h3 className="text-[10px] font-bold text-slate-500 uppercase">Items Ordered</h3>
                           <ul className="text-xs space-y-1">
-                            {ord.items.map((it: any, i: number) => (
+                            {ord.items.map((it, i) => (
                               <li key={i} className="flex justify-between text-slate-700">
                                 <span>{it.name}</span>
                                 <span className="font-semibold">${it.price.toFixed(2)}</span>
@@ -482,34 +529,37 @@ function IndexPage() {
                           </div>
                         </div>
 
-                        {/* Dynamic Status Card */}
+                        {/* Status Display */}
                         <div className={`p-4 rounded-xl border text-center space-y-2 ${
                           ord.status === 'Completed' ? 'bg-emerald-50 border-emerald-300' :
-                          ord.status === 'Served' || ord.status === 'Ready' ? 'bg-emerald-50 border-emerald-200' :
+                          ord.isPaid ? 'bg-emerald-50 border-emerald-200' :
                           ord.status === 'Submitted' ? 'bg-amber-50 border-amber-200' :
                           'bg-blue-50 border-blue-200'
                         }`}>
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
-                          <p className="text-xl font-black text-slate-900">{ord.status}</p>
+                          <p className="text-xl font-black text-slate-900">
+                            {ord.status === 'Served' && !ord.isPaid ? 'Served (Pending Payment)' : ord.status}
+                          </p>
 
                           <div className="pt-0.5">
                             <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-flex items-center gap-1 border border-amber-200">
                               ⏱️ Est. Wait: {ord.prepTime}
                             </span>
                           </div>
-                          
+
                           <p className="text-xs text-slate-600 pt-1">
-                            {ord.status === 'Submitted' && "Order received by kitchen. You can pay anytime."}
-                            {ord.status === 'Assigned' && "Order items assigned to staff. You can pay anytime."}
-                            {ord.status === 'Preparing' && "Food is cooking! You can pay anytime."}
-                            {ord.status === 'Ready' && "Your order is ready!"}
-                            {ord.status === 'Served' && "Food served to Table 4!"}
+                            {ord.isPaid && ord.status !== 'Completed' && "✅ Bill Paid Early. Food in progress!"}
+                            {!ord.isPaid && ord.status === 'Submitted' && "Order received by kitchen. You can pay anytime."}
+                            {!ord.isPaid && ord.status === 'Assigned' && "Order items assigned to staff. You can pay anytime."}
+                            {!ord.isPaid && ord.status === 'Preparing' && "Food is cooking! You can pay anytime."}
+                            {!ord.isPaid && ord.status === 'Ready' && "Your order is ready!"}
+                            {!ord.isPaid && ord.status === 'Served' && "⚠️ Food served! Please pay your bill."}
                             {ord.status === 'Completed' && "Order paid & cleared! Show Exit Pass at door."}
                           </p>
                         </div>
 
-                        {/* IMMEDIATE PAYMENT TRIGGER (AVAILABLE AT ALL STAGES) */}
-                        {ord.status !== 'Completed' && (
+                        {/* Pay Button Trigger */}
+                        {!ord.isPaid && ord.status !== 'Completed' && (
                           <button
                             onClick={() => setCheckoutOrderId(ord.id)}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md flex justify-center items-center gap-2"
@@ -518,8 +568,7 @@ function IndexPage() {
                           </button>
                         )}
 
-                        {/* CANCELLATION LOGIC */}
-                        {ord.status === 'Submitted' ? (
+                        {ord.status === 'Submitted' && !ord.isPaid ? (
                           <button
                             onClick={() => handleCustomerCancel(ord.id)}
                             className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2 rounded-xl font-bold text-xs transition"
@@ -527,21 +576,20 @@ function IndexPage() {
                             Cancel Order
                           </button>
                         ) : (
-                          ord.status !== 'Completed' && (
+                          ord.status !== 'Completed' && !ord.isPaid && (
                             <p className="text-[11px] text-center text-slate-400 italic">
                               🔒 Order in progress. Speak to your waiter for changes.
                             </p>
                           )
                         )}
 
-                        {/* Completion Notice */}
                         {ord.status === 'Completed' && (
                           <div className="space-y-2">
                             <div className="bg-emerald-100 text-emerald-800 p-2.5 rounded-xl text-center text-xs font-bold flex items-center justify-center gap-1.5">
-                              <span>✅ Paid in Full</span>
+                              <span>✅ Paid & Cleared</span>
                             </div>
-                            <button 
-                              onClick={() => handleDismissOrder(ord.id)} 
+                            <button
+                              onClick={() => handleDismissOrder(ord.id)}
                               className="w-full bg-slate-100 text-slate-700 py-2 rounded-xl font-bold text-xs hover:bg-slate-200 transition"
                             >
                               Dismiss Tracker
@@ -561,22 +609,22 @@ function IndexPage() {
             <div className="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Waiter Dashboard</h2>
-                <p className="text-sm text-slate-500 mt-1">Assign items to staff and track table payment status.</p>
+                <p className="text-sm text-slate-500 mt-1">Assign staff employee roles and manage order progress.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {orders.length === 0 && <p className="text-slate-500">No active orders found.</p>}
-              
+
               {orders.map((ord) => {
-                const allItemsAssigned = ord.items.every((it: any) => it.assignedStaff !== 'Unassigned');
+                const allItemsAssigned = ord.items.every((it) => it.assignedStaff !== 'Unassigned');
                 const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
-                const isServedUnpaid = ord.status === 'Served';
+                const isServedUnpaid = ord.status === 'Served' && !ord.isPaid;
                 const isCompleted = ord.status === 'Completed';
 
                 return (
                   <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4 relative">
-                    {/* PENDING PAYMENT ICON BADGE FOR SERVED ORDERS */}
+                    {/* Pending Payment Badge for Waiters */}
                     {isServedUnpaid && (
                       <div className="bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse w-fit">
                         <span>💳</span>
@@ -591,22 +639,22 @@ function IndexPage() {
                         <p className="text-[11px] text-slate-400 font-medium">📅 Ordered: {ord.timestamp}</p>
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
-                        ord.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                        ord.status === 'Served' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                        isCompleted ? 'bg-emerald-100 text-emerald-800' :
+                        isServedUnpaid ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                         ord.status === 'Ready' ? 'bg-teal-100 text-teal-800' :
                         ord.status === 'Preparing' ? 'bg-blue-100 text-blue-800' :
                         ord.status === 'Assigned' ? 'bg-purple-100 text-purple-800' :
                         'bg-slate-100 text-slate-800'
                       }`}>
-                        {ord.status}
+                        {isServedUnpaid ? 'Served (Unpaid)' : ord.status}
                       </span>
                     </div>
 
-                    {/* ITEM-BY-ITEM ASSIGNMENT TABLE */}
+                    {/* Employee Role Assignment Table */}
                     <div className="space-y-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Order Items & Staff Assignment</p>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Order Items & Staff Role Assignment</p>
                       <div className="bg-slate-50 rounded-xl p-3 border space-y-3">
-                        {ord.items.map((it: any) => {
+                        {ord.items.map((it) => {
                           const isDrink = it.category === 'Drinks';
                           const staffOptions = isDrink ? BARTENDER_OPTIONS : CHEF_OPTIONS;
 
@@ -619,14 +667,13 @@ function IndexPage() {
                                 </span>
                               </div>
 
-                              {/* RESTRICTED SELECTOR IF ORDER IS COMPLETED */}
                               <select
                                 value={it.assignedStaff}
                                 disabled={isCompleted}
                                 onChange={(e) => handleAssignItemStaff(ord.id, it.id, e.target.value)}
                                 className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                               >
-                                <option value="Unassigned">Assign Staff...</option>
+                                <option value="Unassigned">Assign Role...</option>
                                 {staffOptions.map((code) => (
                                   <option key={code} value={code}>{code}</option>
                                 ))}
@@ -637,7 +684,7 @@ function IndexPage() {
                       </div>
                     </div>
 
-                    {/* STATUS UPDATE SECTION (DISABLED WHEN COMPLETED) */}
+                    {/* Waiter Status Control */}
                     <div className="pt-3 border-t">
                       <label className="text-xs font-bold text-slate-600 block mb-1">Update Order Status:</label>
                       <select
@@ -647,7 +694,7 @@ function IndexPage() {
                         className="w-full bg-slate-50 border text-sm rounded-xl p-2.5 font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                       >
                         <option value="Submitted">Submitted (Pending Assignment)</option>
-                        
+
                         <option value="Assigned" disabled={!allItemsAssigned}>
                           Assigned {!allItemsAssigned ? '(Assign all items first)' : ''}
                         </option>
@@ -655,7 +702,7 @@ function IndexPage() {
                         <option value="Preparing" disabled={!isAssignedOrBeyond}>
                           Preparing {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
                         </option>
-                        
+
                         <option value="Ready" disabled={!isAssignedOrBeyond}>
                           Ready {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
                         </option>
