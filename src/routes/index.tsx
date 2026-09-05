@@ -5,6 +5,37 @@ export const Route = createFileRoute('/')({
   component: IndexPage,
 });
 
+// 3-Hour TTL Expiration Constant (3 hours in milliseconds)
+const SAVE_TTL_MS = 3 * 60 * 60 * 1000;
+
+// Helper functions for TTL LocalStorage management
+const setWithExpiry = (key: string, value: any) => {
+  if (typeof window === 'undefined') return;
+  const item = {
+    data: value,
+    expiry: Date.now() + SAVE_TTL_MS,
+  };
+  localStorage.setItem(key, JSON.stringify(item));
+};
+
+const getWithExpiry = (key: string, fallback: any) => {
+  if (typeof window === 'undefined') return fallback;
+  const itemStr = localStorage.getItem(key);
+  if (!itemStr) return fallback;
+
+  try {
+    const item = JSON.parse(itemStr);
+    if (Date.now() > item.expiry) {
+      localStorage.removeItem(key);
+      return fallback;
+    }
+    return item.data;
+  } catch (e) {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 // Staff Role Options
 const CHEF_OPTIONS = ['CHF01', 'CHF02', 'CHF03', 'CHF04', 'CHF05'];
 const BARTENDER_OPTIONS = ['BAR01', 'BAR02', 'BAR03', 'BAR04', 'BAR05'];
@@ -26,7 +57,7 @@ export interface OrderItem {
   name: string;
   price: number;
   category: string;
-  assignedStaff: string; // Tracks assigned staff ID / employeeRoleId
+  assignedStaff: string;
 }
 
 export interface Order {
@@ -39,6 +70,14 @@ export interface Order {
   prepTime: string;
   timestamp: string;
   isPaid: boolean;
+  paymentMethod?: string;
+}
+
+export interface ExitPass {
+  orderIds: string[];
+  timestamp: string;
+  table: string;
+  total: string;
 }
 
 function IndexPage() {
@@ -46,44 +85,32 @@ function IndexPage() {
   const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // 1. LOCALSTORAGE PERSISTENT STATES
-  const [orders, setOrders] = useState<Order[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chowly_orders');
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
+  // LOCALSTORAGE TTL PERSISTENT STATES
+  const [orders, setOrders] = useState<Order[]>(() => getWithExpiry('chowly_orders', []));
+  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => getWithExpiry('chowly_customer_order_ids', []));
+  const [activeExitPass, setActiveExitPass] = useState<ExitPass | null>(() => getWithExpiry('chowly_exit_pass', null));
 
-  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chowly_customer_order_ids');
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
-
-  // Save to localStorage on changes
+  // Save to localStorage with 3-Hour TTL on changes
   useEffect(() => {
-    localStorage.setItem('chowly_orders', JSON.stringify(orders));
+    setWithExpiry('chowly_orders', orders);
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem('chowly_customer_order_ids', JSON.stringify(customerOrderIds));
+    setWithExpiry('chowly_customer_order_ids', customerOrderIds);
   }, [customerOrderIds]);
+
+  useEffect(() => {
+    if (activeExitPass) {
+      setWithExpiry('chowly_exit_pass', activeExitPass);
+    } else {
+      localStorage.removeItem('chowly_exit_pass');
+    }
+  }, [activeExitPass]);
 
   // Checkout & Payment State
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Card');
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-
-  // Exit Pass Controls
-  const [activeExitPass, setActiveExitPass] = useState<{
-    orderIds: string[];
-    timestamp: string;
-    table: string;
-    total: string;
-  } | null>(null);
   const [isExitPassMinimized, setIsExitPassMinimized] = useState<boolean>(false);
 
   // Live Timer for Verification Element
@@ -108,7 +135,6 @@ function IndexPage() {
 
   // --- ORDER LIFECYCLE HANDLERS --- //
 
-  // Place Order
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
 
@@ -144,7 +170,6 @@ function IndexPage() {
     setCustomerOrderIds((prev) => prev.filter((id) => id !== orderId));
   };
 
-  // Waiter Assigns Employee Role / Staff Code to an Item
   const handleAssignItemStaff = (orderId: string, itemId: string, staffCode: string) => {
     setOrders((prev) =>
       prev.map((ord) => {
@@ -159,13 +184,11 @@ function IndexPage() {
     );
   };
 
-  // Waiter Updates Status
   const handleUpdateStatus = (orderId: string, newStatus: string) => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
 
-        // If marked Served and customer has already paid, complete automatically
         let finalStatus = newStatus;
         if (newStatus === 'Served' && ord.isPaid) {
           finalStatus = 'Completed';
@@ -176,7 +199,6 @@ function IndexPage() {
     );
   };
 
-  // Process Payment
   const handleProcessPayment = () => {
     if (!checkoutOrderId) return;
     setIsProcessingPayment(true);
@@ -185,21 +207,19 @@ function IndexPage() {
       const paidOrder = orders.find((o) => o.id === checkoutOrderId);
       if (!paidOrder) return;
 
-      // Determine new status: if already served, finalize to Completed, otherwise mark isPaid=true
       const nextStatus = paidOrder.status === 'Served' ? 'Completed' : paidOrder.status;
 
       setOrders((prev) =>
         prev.map((ord) =>
           ord.id === checkoutOrderId
-            ? { ...ord, isPaid: true, status: nextStatus }
+            ? { ...ord, isPaid: true, status: nextStatus, paymentMethod: selectedPaymentMethod }
             : ord
         )
       );
 
-      // Generate Digital Exit Pass
       setActiveExitPass({
         orderIds: [checkoutOrderId],
-        timestamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+        timestamp: `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
         table: paidOrder.table || 'Table 4',
         total: paidOrder.total,
       });
@@ -222,7 +242,7 @@ function IndexPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans pb-16">
-      {/* Navigation Header */}
+      {/* Header */}
       <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">C</div>
@@ -253,7 +273,7 @@ function IndexPage() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
           checkoutOrderId ? (
-            /* CHECKOUT & MULTI-PAYMENT PAGE */
+            /* CHECKOUT VIEW */
             <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border shadow-lg space-y-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
@@ -287,15 +307,15 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Multi-Payment Selection */}
+              {/* Payment Methods */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'card', label: '💳 Credit / Debit Card' },
-                    { id: 'ussd', label: '📲 USSD / Bank Transfer' },
-                    { id: 'wallet', label: '🍏 Apple / Google Pay' },
-                    { id: 'cash', label: '💵 Cash to Waiter' },
+                    { id: 'Card', label: '💳 Credit / Debit Card' },
+                    { id: 'USSD / Transfer', label: '📲 USSD / Bank Transfer' },
+                    { id: 'Apple / Google Pay', label: '🍏 Apple / Google Pay' },
+                    { id: 'Cash to Waiter', label: '💵 Cash to Waiter' },
                   ].map((method) => (
                     <button
                       key={method.id}
@@ -393,6 +413,19 @@ function IndexPage() {
                         </div>
                       ))}
 
+                      {/* LARGE ORDER PREP TIME WARNING BANNER */}
+                      {cart.length > 3 && (
+                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-900">
+                          <span className="text-base">⚠️</span>
+                          <div>
+                            <p className="font-bold">Larger Order Notice (~30 Mins Prep Time)</p>
+                            <p className="text-[11px] text-amber-800 mt-0.5">
+                              Orders with more than 3 items require additional kitchen prep time to ensure all dishes arrive hot and fresh together.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center text-xs">
                         <span className="font-medium text-amber-900">⏱️ Est. Wait Time:</span>
                         <span className="font-bold text-amber-900 bg-amber-100 px-2 py-1 rounded-md">{estimatedWaitTime}</span>
@@ -451,7 +484,7 @@ function IndexPage() {
                         <span className="font-bold text-emerald-400">${activeExitPass.total}</span>
                       </div>
                       <div className="flex justify-between text-slate-300 border-t border-slate-700/60 pt-2">
-                        <span>Timestamp:</span>
+                        <span>Issued:</span>
                         <span className="font-mono text-slate-400">{activeExitPass.timestamp}</span>
                       </div>
                     </div>
@@ -459,7 +492,7 @@ function IndexPage() {
                     <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="font-bold">Live System Time:</span>
+                        <span className="font-bold">Live Clock:</span>
                       </div>
                       <span className="font-mono font-black text-white">{currentTime}</span>
                     </div>
@@ -548,7 +581,7 @@ function IndexPage() {
                           </div>
 
                           <p className="text-xs text-slate-600 pt-1">
-                            {ord.isPaid && ord.status !== 'Completed' && "✅ Bill Paid Early. Food in progress!"}
+                            {ord.isPaid && ord.status !== 'Completed' && "✅ Bill Paid. Food in progress!"}
                             {!ord.isPaid && ord.status === 'Submitted' && "Order received by kitchen. You can pay anytime."}
                             {!ord.isPaid && ord.status === 'Assigned' && "Order items assigned to staff. You can pay anytime."}
                             {!ord.isPaid && ord.status === 'Preparing' && "Food is cooking! You can pay anytime."}
@@ -619,6 +652,7 @@ function IndexPage() {
               {orders.map((ord) => {
                 const allItemsAssigned = ord.items.every((it) => it.assignedStaff !== 'Unassigned');
                 const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
+                const isPreparingOrBeyond = ['Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
                 const isServedUnpaid = ord.status === 'Served' && !ord.isPaid;
                 const isCompleted = ord.status === 'Completed';
 
@@ -637,6 +671,11 @@ function IndexPage() {
                         <span className="text-xs font-bold text-slate-400">{ord.id}</span>
                         <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
                         <p className="text-[11px] text-slate-400 font-medium">📅 Ordered: {ord.timestamp}</p>
+                        {ord.paymentMethod && (
+                          <p className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                            💳 Paid via {ord.paymentMethod}
+                          </p>
+                        )}
                       </div>
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
                         isCompleted ? 'bg-emerald-100 text-emerald-800' :
@@ -669,7 +708,7 @@ function IndexPage() {
 
                               <select
                                 value={it.assignedStaff}
-                                disabled={isCompleted}
+                                disabled={isPreparingOrBeyond}
                                 onChange={(e) => handleAssignItemStaff(ord.id, it.id, e.target.value)}
                                 className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                               >
@@ -711,8 +750,8 @@ function IndexPage() {
                           Served (Awaits Customer Payment)
                         </option>
 
-                        <option value="Completed">
-                          Completed (Paid & Cleared)
+                        <option value="Completed" disabled={!allItemsAssigned}>
+                          Completed (Paid & Cleared) {!allItemsAssigned ? '(Assign all items first)' : ''}
                         </option>
 
                         <option value="Cancelled">Cancelled (Void)</option>
