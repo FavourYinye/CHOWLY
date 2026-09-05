@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
 
+<<<<<<< HEAD
 export const Route = createFileRoute('/')({
   component: IndexPage,
 });
@@ -37,10 +37,13 @@ const getWithExpiry = (key: string, fallback: any) => {
 };
 
 // Staff Role Options
+=======
+// Predefined Employee Role IDs
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
 const CHEF_OPTIONS = ['CHF01', 'CHF02', 'CHF03', 'CHF04', 'CHF05'];
 const BARTENDER_OPTIONS = ['BAR01', 'BAR02', 'BAR03', 'BAR04', 'BAR05'];
 
-// Menu Data
+// Menu Catalog
 const MENU_ITEMS = [
   { id: '1', name: 'Jollof Rice & Grilled Chicken', price: 14.99, category: 'Mains', prepTime: '15 mins', image: '🍗', color: 'bg-amber-100' },
   { id: '2', name: 'Amala & Ewedu', price: 16.50, category: 'Mains', prepTime: '15 mins', image: '🍲', color: 'bg-stone-200' },
@@ -57,7 +60,11 @@ export interface OrderItem {
   name: string;
   price: number;
   category: string;
+<<<<<<< HEAD
   assignedStaff: string;
+=======
+  assignedStaff: string; // Tracks employeeRoleId (CHFxx / BARxx)
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
 }
 
 export interface Order {
@@ -80,17 +87,37 @@ export interface ExitPass {
   total: string;
 }
 
-function IndexPage() {
+export default function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
   const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
+<<<<<<< HEAD
   // LOCALSTORAGE TTL PERSISTENT STATES
   const [orders, setOrders] = useState<Order[]>(() => getWithExpiry('chowly_orders', []));
   const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => getWithExpiry('chowly_customer_order_ids', []));
   const [activeExitPass, setActiveExitPass] = useState<ExitPass | null>(() => getWithExpiry('chowly_exit_pass', null));
 
   // Save to localStorage with 3-Hour TTL on changes
+=======
+  // LocalStorage Persistence
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chowly_orders');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chowly_customer_order_ids');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   useEffect(() => {
     setWithExpiry('chowly_orders', orders);
   }, [orders]);
@@ -99,6 +126,7 @@ function IndexPage() {
     setWithExpiry('chowly_customer_order_ids', customerOrderIds);
   }, [customerOrderIds]);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (activeExitPass) {
       setWithExpiry('chowly_exit_pass', activeExitPass);
@@ -108,12 +136,24 @@ function IndexPage() {
   }, [activeExitPass]);
 
   // Checkout & Payment State
+=======
+  // Checkout & Exit Pass States
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Card');
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+<<<<<<< HEAD
+=======
+
+  const [activeExitPass, setActiveExitPass] = useState<{
+    orderIds: string[];
+    timestamp: string;
+    table: string;
+    total: string;
+  } | null>(null);
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const [isExitPassMinimized, setIsExitPassMinimized] = useState<boolean>(false);
 
-  // Live Timer for Verification Element
   const [currentTime, setCurrentTime] = useState<string>('');
   useEffect(() => {
     const timer = setInterval(() => {
@@ -122,7 +162,7 @@ function IndexPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Cart Management
+  // Cart Management Actions
   const addToCart = (item: typeof MENU_ITEMS[0]) => {
     const cartItem = { ...item, cartId: `${item.id}-${Date.now()}` };
     setCart((prev) => [...prev, cartItem]);
@@ -133,7 +173,11 @@ function IndexPage() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
   const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : cart.length > 0 ? '~15 Mins' : '0 Mins';
 
+<<<<<<< HEAD
   // Order Handlers
+=======
+  // Handlers
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
 
@@ -187,12 +231,14 @@ function IndexPage() {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
+<<<<<<< HEAD
 
+=======
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
         let finalStatus = newStatus;
         if (newStatus === 'Served' && ord.isPaid) {
           finalStatus = 'Completed';
         }
-
         return { ...ord, status: finalStatus };
       })
     );
@@ -210,9 +256,13 @@ function IndexPage() {
 
       setOrders((prev) =>
         prev.map((ord) =>
+<<<<<<< HEAD
           ord.id === checkoutOrderId
             ? { ...ord, isPaid: true, status: nextStatus, paymentMethod: selectedPaymentMethod }
             : ord
+=======
+          ord.id === checkoutOrderId ? { ...ord, isPaid: true, status: nextStatus } : ord
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
         )
       );
 
@@ -223,7 +273,6 @@ function IndexPage() {
         total: paidOrder.total,
       });
       setIsExitPassMinimized(false);
-
       setIsProcessingPayment(false);
       setCheckoutOrderId(null);
     }, 1500);
@@ -235,12 +284,15 @@ function IndexPage() {
 
   const categories = ['All', 'Mains', 'Appetizers', 'Drinks'];
   const filteredItems = selectedCategory === 'All' ? MENU_ITEMS : MENU_ITEMS.filter((i) => i.category === selectedCategory);
-
   const activeCustomerOrders = orders.filter((o) => customerOrderIds.includes(o.id));
   const orderBeingPaid = orders.find((o) => o.id === checkoutOrderId);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans pb-16">
+<<<<<<< HEAD
+=======
+      {/* Header */}
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
       <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">C</div>
@@ -270,6 +322,10 @@ function IndexPage() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
           checkoutOrderId ? (
+<<<<<<< HEAD
+=======
+            /* CHECKOUT & PAYMENT */
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
             <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border shadow-lg space-y-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
@@ -332,10 +388,18 @@ function IndexPage() {
                 disabled={isProcessingPayment}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black text-base shadow-lg transition flex justify-center items-center gap-2 disabled:opacity-50"
               >
+<<<<<<< HEAD
                 {isProcessingPayment ? 'Processing Payment...' : `Pay $${orderBeingPaid?.total} & Get Exit Pass`}
               </button>
             </div>
           ) : (
+=======
+                {isProcessingPayment ? '🌀 Processing Payment...' : `Pay $${orderBeingPaid?.total} & Get Exit Pass`}
+              </button>
+            </div>
+          ) : (
+            /* CATALOG & TRACKER */
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <div className="flex gap-2 overflow-x-auto pb-2">
@@ -374,6 +438,10 @@ function IndexPage() {
                 </div>
               </div>
 
+<<<<<<< HEAD
+=======
+              {/* Cart & Active Orders Sidebar */}
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                   <div className="flex justify-between items-center border-b pb-3">
@@ -426,7 +494,7 @@ function IndexPage() {
                   )}
                 </div>
 
-                {/* DIGITAL EXIT PASS */}
+                {/* Digital Exit Pass */}
                 {activeExitPass && !isExitPassMinimized && (
                   <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 text-white shadow-2xl border-2 border-emerald-500/50 space-y-5">
                     <div className="flex justify-between items-start border-b border-slate-800 pb-3">
@@ -434,21 +502,45 @@ function IndexPage() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">CHOWLY OFFICIAL PASS</span>
                         <h3 className="text-xl font-black text-white">EXIT PASS CLEARED</h3>
                       </div>
+<<<<<<< HEAD
+=======
+                      <span className="bg-emerald-500/20 text-emerald-400 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-500/40">
+                        PAID & CLEARED
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-900 border-4 border-emerald-500">
+                      <div className="relative w-36 h-36 bg-slate-950 rounded-xl p-2 flex items-center justify-center">
+                        <div className="w-full h-full border-2 border-dashed border-emerald-400/60 rounded flex items-center justify-center text-slate-700 text-[10px] text-center font-mono">
+                          [VERIFIED-QR-PASS]
+                        </div>
+                        <div className="absolute w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg">✓</div>
+                      </div>
+                      <p className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Scan at Door / Show Waiter</p>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
 
                     <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-2 text-xs">
                       <div className="flex justify-between text-slate-300">
-                        <span>Order IDs Covered:</span>
+                        <span>Order IDs:</span>
                         <span className="font-mono font-bold text-emerald-400">{activeExitPass.orderIds.join(', ')}</span>
                       </div>
                       <div className="flex justify-between text-slate-300">
-                        <span>Table Number:</span>
+                        <span>Table:</span>
                         <span className="font-bold text-white">{activeExitPass.table}</span>
                       </div>
                       <div className="flex justify-between text-slate-300">
                         <span>Total Paid:</span>
                         <span className="font-bold text-emerald-400">${activeExitPass.total}</span>
                       </div>
+<<<<<<< HEAD
+=======
+                    </div>
+
+                    <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
+                      <span className="font-bold">Live System Time:</span>
+                      <span className="font-mono font-black text-white">{currentTime}</span>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
 
                     <button
@@ -456,11 +548,29 @@ function IndexPage() {
                       className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition"
                     >
                       Minimize Exit Pass
+<<<<<<< HEAD
+=======
                     </button>
                   </div>
                 )}
 
-                {/* ACTIVE CUSTOMER ORDERS TRACKER */}
+                {activeExitPass && isExitPassMinimized && (
+                  <div className="bg-emerald-900 border-2 border-emerald-400 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-black uppercase text-emerald-300">Exit Pass Active</h4>
+                      <p className="text-xs font-bold text-white">{activeExitPass.orderIds.join(', ')} • Table 4</p>
+                    </div>
+                    <button
+                      onClick={() => setIsExitPassMinimized(false)}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl text-xs font-black transition"
+                    >
+                      Show Pass
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
+                    </button>
+                  </div>
+                )}
+
+                {/* Customer Active Trackers */}
                 {activeCustomerOrders.length > 0 && (
                   <div className="space-y-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 px-1">
@@ -472,13 +582,16 @@ function IndexPage() {
                         <div className="border-b pb-3 flex justify-between items-start">
                           <div>
                             <h2 className="text-lg font-bold text-slate-900">Order Tracker</h2>
+<<<<<<< HEAD
                             <p className="text-[11px] text-slate-400 font-medium">Order Date: {ord.timestamp}</p>
+=======
+                            <p className="text-[11px] text-slate-400 font-medium">📅 {ord.timestamp}</p>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                           </div>
-                          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">
-                            {ord.id}
-                          </span>
+                          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">{ord.id}</span>
                         </div>
 
+<<<<<<< HEAD
                         <div className="bg-slate-50 p-3 rounded-xl border space-y-1.5">
                           <h3 className="text-[10px] font-bold text-slate-500 uppercase">Items Ordered</h3>
                           <ul className="text-xs space-y-1">
@@ -492,10 +605,36 @@ function IndexPage() {
                         </div>
 
                         <div className="p-4 rounded-xl border text-center space-y-2 bg-slate-50">
+=======
+                        <div className="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs">
+                          {ord.items.map((it, i) => (
+                            <div key={i} className="flex justify-between text-slate-700">
+                              <span>{it.name}</span>
+                              <span className="font-semibold">${it.price.toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div className="border-t pt-1.5 mt-1.5 flex justify-between font-bold text-slate-900">
+                            <span>Total:</span>
+                            <span>${ord.total}</span>
+                          </div>
+                        </div>
+
+                        <div className={`p-4 rounded-xl border text-center space-y-2 ${
+                          ord.status === 'Completed' ? 'bg-emerald-50 border-emerald-300' :
+                          ord.isPaid ? 'bg-emerald-50 border-emerald-200' :
+                          ord.status === 'Submitted' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
+                        }`}>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
                           <p className="text-xl font-black text-slate-900">
                             {ord.status === 'Served' && !ord.isPaid ? 'Served (Pending Payment)' : ord.status}
                           </p>
+<<<<<<< HEAD
+=======
+                          <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-block border border-amber-200">
+                            ⏱️ Est. Wait: {ord.prepTime}
+                          </span>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                         </div>
 
                         {!ord.isPaid && ord.status !== 'Completed' && (
@@ -546,6 +685,7 @@ function IndexPage() {
 
               {orders.map((ord) => {
                 const allItemsAssigned = ord.items.every((it) => it.assignedStaff !== 'Unassigned');
+<<<<<<< HEAD
                 const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
                 const isPreparingOrBeyond = ['Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
                 const isReadyOrBeyond = ['Ready', 'Served', 'Completed'].includes(ord.status);
@@ -565,8 +705,19 @@ function IndexPage() {
                           <p className="text-xs text-slate-500 mt-0.5">{ord.customer} • {ord.table}</p>
                         </div>
                         <span className="text-xl font-black text-slate-900">${ord.total}</span>
+=======
+                const isServedUnpaid = ord.status === 'Served' && !ord.isPaid;
+                const isCompleted = ord.status === 'Completed';
+
+                return (
+                  <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4 relative">
+                    {isServedUnpaid && (
+                      <div className="bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse w-fit">
+                        <span>💳 PENDING PAYMENT</span>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                       </div>
 
+<<<<<<< HEAD
                       <div className="space-y-2">
                         <h3 className="text-xs font-bold text-slate-500 uppercase">Item Assignment</h3>
                         {ord.items.map((item) => {
@@ -583,6 +734,41 @@ function IndexPage() {
                                 <option value="Unassigned">-- Select --</option>
                                 {staffOptions.map((code) => (
                                   <option key={code} value={code}>{code}</option>
+=======
+                    <div className="flex justify-between border-b pb-3">
+                      <div>
+                        <span className="text-xs font-bold text-slate-400">{ord.id}</span>
+                        <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
+                        <p className="text-[11px] text-slate-400 font-medium">📅 Ordered: {ord.timestamp}</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
+                        isCompleted ? 'bg-emerald-100 text-emerald-800' :
+                        ord.isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {isCompleted ? 'Completed' : ord.isPaid ? 'Paid' : 'Unpaid'}
+                      </span>
+                    </div>
+
+                    {/* Staff Assignment per Item */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Staff Role IDs</h4>
+                      <div className="space-y-2">
+                        {ord.items.map((item) => {
+                          const options = item.category === 'Drinks' ? BARTENDER_OPTIONS : CHEF_OPTIONS;
+
+                          return (
+                            <div key={item.id} className="flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border">
+                              <span className="font-semibold text-slate-800">{item.name}</span>
+                              <select
+                                value={item.assignedStaff}
+                                onChange={(e) => handleAssignItemStaff(ord.id, item.id, e.target.value)}
+                                disabled={isCompleted}
+                                className="bg-white border rounded-lg px-2 py-1 font-mono font-bold text-slate-700 focus:ring-2 focus:ring-amber-500"
+                              >
+                                <option value="Unassigned">Assign Role</option>
+                                {options.map((role) => (
+                                  <option key={role} value={role}>{role}</option>
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                                 ))}
                               </select>
                             </div>
@@ -591,6 +777,7 @@ function IndexPage() {
                       </div>
                     </div>
 
+<<<<<<< HEAD
                     <div className="border-t pt-4 grid grid-cols-2 gap-2">
                       <button
                         disabled={!allItemsAssigned || isAssignedOrBeyond}
@@ -620,6 +807,44 @@ function IndexPage() {
                       >
                         4. Serve to Table
                       </button>
+=======
+                    {/* Order Workflow Controls */}
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex justify-between items-center text-sm font-bold">
+                        <span className="text-slate-600">Current Status:</span>
+                        <span className="text-slate-900">{ord.status}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleUpdateStatus(ord.id, 'Preparing')}
+                          disabled={!allItemsAssigned || isCompleted}
+                          className="bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-xl text-xs font-bold disabled:opacity-40 transition"
+                        >
+                          Mark Preparing
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(ord.id, 'Ready')}
+                          disabled={ord.status !== 'Preparing' || isCompleted}
+                          className="bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-xl text-xs font-bold disabled:opacity-40 transition"
+                        >
+                          Mark Ready
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(ord.id, 'Served')}
+                          disabled={ord.status !== 'Ready' || isCompleted}
+                          className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold disabled:opacity-40 transition"
+                        >
+                          Mark Served
+                        </button>
+                      </div>
+
+                      {!allItemsAssigned && !isCompleted && (
+                        <p className="text-[11px] text-amber-600 font-medium text-center">
+                          ⚠️ Assign employee roles to all items to begin preparation.
+                        </p>
+                      )}
+>>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
                   </div>
                 );
@@ -631,5 +856,3 @@ function IndexPage() {
     </div>
   );
 }
-
-export default IndexPage;
