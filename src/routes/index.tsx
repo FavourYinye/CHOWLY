@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
 
 // Predefined Employee Role IDs
 const CHEF_OPTIONS = ['CHF01', 'CHF02', 'CHF03', 'CHF04', 'CHF05'];
@@ -36,7 +37,7 @@ export interface Order {
   isPaid: boolean;
 }
 
-export default function IndexPage() {
+function IndexPage() {
   const [activeRole, setActiveRole] = useState<'customer' | 'waiter'>('customer');
   const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -153,7 +154,7 @@ export default function IndexPage() {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
-        
+
         // Automatic state transition: If marked Served and already paid, auto-complete
         const updatedStatus = newStatus === 'Served' && ord.isPaid ? 'Completed' : newStatus;
 
@@ -650,3 +651,7 @@ export default function IndexPage() {
     </div>
   );
 }
+
+export const Route = createFileRoute('/')({
+  component: IndexPage,
+});
