@@ -1,45 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-<<<<<<< HEAD
-export const Route = createFileRoute('/')({
-  component: IndexPage,
-});
-
-// 3-Hour TTL Expiration Constant (3 hours in milliseconds)
-const SAVE_TTL_MS = 3 * 60 * 60 * 1000;
-
-// Helper functions for TTL LocalStorage management
-const setWithExpiry = (key: string, value: any) => {
-  if (typeof window === 'undefined') return;
-  const item = {
-    data: value,
-    expiry: Date.now() + SAVE_TTL_MS,
-  };
-  localStorage.setItem(key, JSON.stringify(item));
-};
-
-const getWithExpiry = (key: string, fallback: any) => {
-  if (typeof window === 'undefined') return fallback;
-  const itemStr = localStorage.getItem(key);
-  if (!itemStr) return fallback;
-
-  try {
-    const item = JSON.parse(itemStr);
-    if (Date.now() > item.expiry) {
-      localStorage.removeItem(key);
-      return fallback;
-    }
-    return item.data;
-  } catch (e) {
-    localStorage.removeItem(key);
-    return fallback;
-  }
-};
-
-// Staff Role Options
-=======
 // Predefined Employee Role IDs
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
 const CHEF_OPTIONS = ['CHF01', 'CHF02', 'CHF03', 'CHF04', 'CHF05'];
 const BARTENDER_OPTIONS = ['BAR01', 'BAR02', 'BAR03', 'BAR04', 'BAR05'];
 
@@ -60,11 +21,7 @@ export interface OrderItem {
   name: string;
   price: number;
   category: string;
-<<<<<<< HEAD
-  assignedStaff: string;
-=======
   assignedStaff: string; // Tracks employeeRoleId (CHFxx / BARxx)
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
 }
 
 export interface Order {
@@ -77,14 +34,6 @@ export interface Order {
   prepTime: string;
   timestamp: string;
   isPaid: boolean;
-  paymentMethod?: string;
-}
-
-export interface ExitPass {
-  orderIds: string[];
-  timestamp: string;
-  table: string;
-  total: string;
 }
 
 export default function IndexPage() {
@@ -92,14 +41,6 @@ export default function IndexPage() {
   const [cart, setCart] = useState<{ cartId: string; id: string; name: string; price: number; category: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-<<<<<<< HEAD
-  // LOCALSTORAGE TTL PERSISTENT STATES
-  const [orders, setOrders] = useState<Order[]>(() => getWithExpiry('chowly_orders', []));
-  const [customerOrderIds, setCustomerOrderIds] = useState<string[]>(() => getWithExpiry('chowly_customer_order_ids', []));
-  const [activeExitPass, setActiveExitPass] = useState<ExitPass | null>(() => getWithExpiry('chowly_exit_pass', null));
-
-  // Save to localStorage with 3-Hour TTL on changes
-=======
   // LocalStorage Persistence
   const [orders, setOrders] = useState<Order[]>(() => {
     if (typeof window !== 'undefined') {
@@ -117,33 +58,18 @@ export default function IndexPage() {
     return [];
   });
 
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   useEffect(() => {
-    setWithExpiry('chowly_orders', orders);
+    localStorage.setItem('chowly_orders', JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    setWithExpiry('chowly_customer_order_ids', customerOrderIds);
+    localStorage.setItem('chowly_customer_order_ids', JSON.stringify(customerOrderIds));
   }, [customerOrderIds]);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    if (activeExitPass) {
-      setWithExpiry('chowly_exit_pass', activeExitPass);
-    } else {
-      localStorage.removeItem('chowly_exit_pass');
-    }
-  }, [activeExitPass]);
-
-  // Checkout & Payment State
-=======
   // Checkout & Exit Pass States
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Card');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card');
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
-<<<<<<< HEAD
-=======
 
   const [activeExitPass, setActiveExitPass] = useState<{
     orderIds: string[];
@@ -151,7 +77,6 @@ export default function IndexPage() {
     table: string;
     total: string;
   } | null>(null);
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const [isExitPassMinimized, setIsExitPassMinimized] = useState<boolean>(false);
 
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -173,11 +98,7 @@ export default function IndexPage() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
   const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : cart.length > 0 ? '~15 Mins' : '0 Mins';
 
-<<<<<<< HEAD
-  // Order Handlers
-=======
   // Handlers
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
 
@@ -227,23 +148,21 @@ export default function IndexPage() {
     );
   };
 
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
+  // Waiter workflow controls: Restricted to Preparing, Ready, Served only
+  const handleUpdateStatus = (orderId: string, newStatus: 'Preparing' | 'Ready' | 'Served') => {
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
-<<<<<<< HEAD
+        
+        // Automatic state transition: If marked Served and already paid, auto-complete
+        const updatedStatus = newStatus === 'Served' && ord.isPaid ? 'Completed' : newStatus;
 
-=======
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
-        let finalStatus = newStatus;
-        if (newStatus === 'Served' && ord.isPaid) {
-          finalStatus = 'Completed';
-        }
-        return { ...ord, status: finalStatus };
+        return { ...ord, status: updatedStatus };
       })
     );
   };
 
+  // Payment triggers completion automatically if order is already served
   const handleProcessPayment = () => {
     if (!checkoutOrderId) return;
     setIsProcessingPayment(true);
@@ -252,23 +171,18 @@ export default function IndexPage() {
       const paidOrder = orders.find((o) => o.id === checkoutOrderId);
       if (!paidOrder) return;
 
+      // Automatic completion rule: If already served, pay transitions status to 'Completed'
       const nextStatus = paidOrder.status === 'Served' ? 'Completed' : paidOrder.status;
 
       setOrders((prev) =>
         prev.map((ord) =>
-<<<<<<< HEAD
-          ord.id === checkoutOrderId
-            ? { ...ord, isPaid: true, status: nextStatus, paymentMethod: selectedPaymentMethod }
-            : ord
-=======
           ord.id === checkoutOrderId ? { ...ord, isPaid: true, status: nextStatus } : ord
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
         )
       );
 
       setActiveExitPass({
         orderIds: [checkoutOrderId],
-        timestamp: `${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
+        timestamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
         table: paidOrder.table || 'Table 4',
         total: paidOrder.total,
       });
@@ -289,10 +203,7 @@ export default function IndexPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans pb-16">
-<<<<<<< HEAD
-=======
       {/* Header */}
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
       <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">C</div>
@@ -319,13 +230,11 @@ export default function IndexPage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
           checkoutOrderId ? (
-<<<<<<< HEAD
-=======
             /* CHECKOUT & PAYMENT */
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
             <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border shadow-lg space-y-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
@@ -333,13 +242,13 @@ export default function IndexPage() {
                   <p className="text-xs text-slate-500 mt-0.5">
                     Ref: <span className="font-mono font-bold">{checkoutOrderId}</span> • Table 4
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Date/Time: {orderBeingPaid?.timestamp}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">📅 Date/Time: {orderBeingPaid?.timestamp}</p>
                 </div>
                 <button
                   onClick={() => setCheckoutOrderId(null)}
                   className="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg transition"
                 >
-                  Back to Menu
+                  ← Back to Menu
                 </button>
               </div>
 
@@ -363,10 +272,10 @@ export default function IndexPage() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'Card', label: 'Credit / Debit Card' },
-                    { id: 'USSD / Transfer', label: 'USSD / Bank Transfer' },
-                    { id: 'Apple / Google Pay', label: 'Apple / Google Pay' },
-                    { id: 'Cash to Waiter', label: 'Cash to Waiter' },
+                    { id: 'card', label: '💳 Credit / Debit Card' },
+                    { id: 'ussd', label: '📲 USSD / Bank Transfer' },
+                    { id: 'wallet', label: '🍏 Apple / Google Pay' },
+                    { id: 'cash', label: '💵 Cash to Waiter' },
                   ].map((method) => (
                     <button
                       key={method.id}
@@ -388,18 +297,11 @@ export default function IndexPage() {
                 disabled={isProcessingPayment}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black text-base shadow-lg transition flex justify-center items-center gap-2 disabled:opacity-50"
               >
-<<<<<<< HEAD
-                {isProcessingPayment ? 'Processing Payment...' : `Pay $${orderBeingPaid?.total} & Get Exit Pass`}
-              </button>
-            </div>
-          ) : (
-=======
                 {isProcessingPayment ? '🌀 Processing Payment...' : `Pay $${orderBeingPaid?.total} & Get Exit Pass`}
               </button>
             </div>
           ) : (
             /* CATALOG & TRACKER */
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <div className="flex gap-2 overflow-x-auto pb-2">
@@ -438,10 +340,7 @@ export default function IndexPage() {
                 </div>
               </div>
 
-<<<<<<< HEAD
-=======
               {/* Cart & Active Orders Sidebar */}
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                   <div className="flex justify-between items-center border-b pb-3">
@@ -453,6 +352,7 @@ export default function IndexPage() {
                   </div>
                   {cart.length === 0 ? (
                     <div className="text-center py-6 text-slate-400">
+                      <p className="text-3xl mb-1">🛒</p>
                       <p className="text-xs">Select items above to start an order.</p>
                     </div>
                   ) : (
@@ -463,21 +363,12 @@ export default function IndexPage() {
                             <p className="font-medium text-slate-800">{cartItem.name}</p>
                             <p className="text-xs font-bold text-slate-500">${cartItem.price.toFixed(2)}</p>
                           </div>
-                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">Remove</button>
+                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">✕</button>
                         </div>
                       ))}
 
-                      {cart.length > 3 && (
-                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900">
-                          <p className="font-bold">Larger Order Notice (~30 Mins Prep Time)</p>
-                          <p className="text-[11px] text-amber-800 mt-0.5">
-                            Orders with more than 3 items require additional kitchen prep time.
-                          </p>
-                        </div>
-                      )}
-
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center text-xs">
-                        <span className="font-medium text-amber-900">Est. Wait Time:</span>
+                        <span className="font-medium text-amber-900">⏱️ Est. Wait Time:</span>
                         <span className="font-bold text-amber-900 bg-amber-100 px-2 py-1 rounded-md">{estimatedWaitTime}</span>
                       </div>
 
@@ -502,8 +393,6 @@ export default function IndexPage() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">CHOWLY OFFICIAL PASS</span>
                         <h3 className="text-xl font-black text-white">EXIT PASS CLEARED</h3>
                       </div>
-<<<<<<< HEAD
-=======
                       <span className="bg-emerald-500/20 text-emerald-400 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-500/40">
                         PAID & CLEARED
                       </span>
@@ -517,7 +406,6 @@ export default function IndexPage() {
                         <div className="absolute w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg">✓</div>
                       </div>
                       <p className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Scan at Door / Show Waiter</p>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
 
                     <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-2 text-xs">
@@ -533,14 +421,11 @@ export default function IndexPage() {
                         <span>Total Paid:</span>
                         <span className="font-bold text-emerald-400">${activeExitPass.total}</span>
                       </div>
-<<<<<<< HEAD
-=======
                     </div>
 
                     <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
                       <span className="font-bold">Live System Time:</span>
                       <span className="font-mono font-black text-white">{currentTime}</span>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
 
                     <button
@@ -548,8 +433,6 @@ export default function IndexPage() {
                       className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition"
                     >
                       Minimize Exit Pass
-<<<<<<< HEAD
-=======
                     </button>
                   </div>
                 )}
@@ -565,7 +448,6 @@ export default function IndexPage() {
                       className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl text-xs font-black transition"
                     >
                       Show Pass
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </button>
                   </div>
                 )}
@@ -582,30 +464,11 @@ export default function IndexPage() {
                         <div className="border-b pb-3 flex justify-between items-start">
                           <div>
                             <h2 className="text-lg font-bold text-slate-900">Order Tracker</h2>
-<<<<<<< HEAD
-                            <p className="text-[11px] text-slate-400 font-medium">Order Date: {ord.timestamp}</p>
-=======
                             <p className="text-[11px] text-slate-400 font-medium">📅 {ord.timestamp}</p>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                           </div>
                           <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">{ord.id}</span>
                         </div>
 
-<<<<<<< HEAD
-                        <div className="bg-slate-50 p-3 rounded-xl border space-y-1.5">
-                          <h3 className="text-[10px] font-bold text-slate-500 uppercase">Items Ordered</h3>
-                          <ul className="text-xs space-y-1">
-                            {ord.items.map((it, i) => (
-                              <li key={i} className="flex justify-between text-slate-700">
-                                <span>{it.name}</span>
-                                <span className="font-semibold">${it.price.toFixed(2)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div className="p-4 rounded-xl border text-center space-y-2 bg-slate-50">
-=======
                         <div className="bg-slate-50 p-3 rounded-xl border space-y-1.5 text-xs">
                           {ord.items.map((it, i) => (
                             <div key={i} className="flex justify-between text-slate-700">
@@ -624,17 +487,13 @@ export default function IndexPage() {
                           ord.isPaid ? 'bg-emerald-50 border-emerald-200' :
                           ord.status === 'Submitted' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
                         }`}>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
                           <p className="text-xl font-black text-slate-900">
                             {ord.status === 'Served' && !ord.isPaid ? 'Served (Pending Payment)' : ord.status}
                           </p>
-<<<<<<< HEAD
-=======
                           <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-block border border-amber-200">
                             ⏱️ Est. Wait: {ord.prepTime}
                           </span>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                         </div>
 
                         {!ord.isPaid && ord.status !== 'Completed' && (
@@ -642,7 +501,7 @@ export default function IndexPage() {
                             onClick={() => setCheckoutOrderId(ord.id)}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md"
                           >
-                            Pay Bill Now (${ord.total})
+                            💳 Pay Bill Now (${ord.total})
                           </button>
                         )}
 
@@ -685,27 +544,6 @@ export default function IndexPage() {
 
               {orders.map((ord) => {
                 const allItemsAssigned = ord.items.every((it) => it.assignedStaff !== 'Unassigned');
-<<<<<<< HEAD
-                const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
-                const isPreparingOrBeyond = ['Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
-                const isReadyOrBeyond = ['Ready', 'Served', 'Completed'].includes(ord.status);
-                const isServedOrBeyond = ['Served', 'Completed'].includes(ord.status);
-
-                return (
-                  <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-5 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start border-b pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-extrabold text-slate-900 text-lg">{ord.id}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
-                              {ord.isPaid ? 'PAID' : 'UNPAID'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-0.5">{ord.customer} • {ord.table}</p>
-                        </div>
-                        <span className="text-xl font-black text-slate-900">${ord.total}</span>
-=======
                 const isServedUnpaid = ord.status === 'Served' && !ord.isPaid;
                 const isCompleted = ord.status === 'Completed';
 
@@ -714,27 +552,9 @@ export default function IndexPage() {
                     {isServedUnpaid && (
                       <div className="bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse w-fit">
                         <span>💳 PENDING PAYMENT</span>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                       </div>
+                    )}
 
-<<<<<<< HEAD
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase">Item Assignment</h3>
-                        {ord.items.map((item) => {
-                          const staffOptions = item.category === 'Drinks' ? BARTENDER_OPTIONS : CHEF_OPTIONS;
-
-                          return (
-                            <div key={item.id} className="bg-slate-50 p-3 rounded-xl border flex justify-between items-center">
-                              <span className="text-xs font-bold text-slate-800">{item.name}</span>
-                              <select
-                                value={item.assignedStaff}
-                                onChange={(e) => handleAssignItemStaff(ord.id, item.id, e.target.value)}
-                                className="bg-white border rounded text-xs font-bold p-1 text-slate-700"
-                              >
-                                <option value="Unassigned">-- Select --</option>
-                                {staffOptions.map((code) => (
-                                  <option key={code} value={code}>{code}</option>
-=======
                     <div className="flex justify-between border-b pb-3">
                       <div>
                         <span className="text-xs font-bold text-slate-400">{ord.id}</span>
@@ -768,7 +588,6 @@ export default function IndexPage() {
                                 <option value="Unassigned">Assign Role</option>
                                 {options.map((role) => (
                                   <option key={role} value={role}>{role}</option>
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                                 ))}
                               </select>
                             </div>
@@ -777,37 +596,6 @@ export default function IndexPage() {
                       </div>
                     </div>
 
-<<<<<<< HEAD
-                    <div className="border-t pt-4 grid grid-cols-2 gap-2">
-                      <button
-                        disabled={!allItemsAssigned || isAssignedOrBeyond}
-                        onClick={() => handleUpdateStatus(ord.id, 'Assigned')}
-                        className="py-2 px-3 rounded-xl text-xs font-bold bg-blue-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
-                      >
-                        1. Confirm Staff
-                      </button>
-                      <button
-                        disabled={ord.status !== 'Assigned' && !isPreparingOrBeyond}
-                        onClick={() => handleUpdateStatus(ord.id, 'Preparing')}
-                        className="py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
-                      >
-                        2. Start Cooking
-                      </button>
-                      <button
-                        disabled={ord.status !== 'Preparing' && !isReadyOrBeyond}
-                        onClick={() => handleUpdateStatus(ord.id, 'Ready')}
-                        className="py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
-                      >
-                        3. Mark Ready
-                      </button>
-                      <button
-                        disabled={ord.status !== 'Ready' && !isServedOrBeyond}
-                        onClick={() => handleUpdateStatus(ord.id, 'Served')}
-                        className="py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
-                      >
-                        4. Serve to Table
-                      </button>
-=======
                     {/* Order Workflow Controls */}
                     <div className="border-t pt-4 space-y-3">
                       <div className="flex justify-between items-center text-sm font-bold">
@@ -815,6 +603,7 @@ export default function IndexPage() {
                         <span className="text-slate-900">{ord.status}</span>
                       </div>
 
+                      {/* Manual 'Completed' action removed. Waiters can only cycle through Preparing, Ready, and Served. */}
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => handleUpdateStatus(ord.id, 'Preparing')}
@@ -839,12 +628,17 @@ export default function IndexPage() {
                         </button>
                       </div>
 
+                      {isCompleted && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center text-xs font-bold text-emerald-800">
+                          ✓ Order Paid & Completed
+                        </div>
+                      )}
+
                       {!allItemsAssigned && !isCompleted && (
                         <p className="text-[11px] text-amber-600 font-medium text-center">
                           ⚠️ Assign employee roles to all items to begin preparation.
                         </p>
                       )}
->>>>>>> 6f97709 (refactor(waiter): restrict order completion to automatic customer payment trigger)
                     </div>
                   </div>
                 );
