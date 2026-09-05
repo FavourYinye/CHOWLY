@@ -133,8 +133,7 @@ function IndexPage() {
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
   const estimatedWaitTime = cart.length > 3 ? '~30 Mins' : cart.length > 0 ? '~15 Mins' : '0 Mins';
 
-  // --- ORDER LIFECYCLE HANDLERS --- //
-
+  // Order Handlers
   const handlePlaceOrder = () => {
     if (cart.length === 0) return;
 
@@ -242,7 +241,6 @@ function IndexPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans pb-16">
-      {/* Header */}
       <header className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl">C</div>
@@ -269,11 +267,9 @@ function IndexPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         {activeRole === 'customer' ? (
           checkoutOrderId ? (
-            /* CHECKOUT VIEW */
             <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border shadow-lg space-y-6">
               <div className="flex justify-between items-center border-b pb-4">
                 <div>
@@ -281,13 +277,13 @@ function IndexPage() {
                   <p className="text-xs text-slate-500 mt-0.5">
                     Ref: <span className="font-mono font-bold">{checkoutOrderId}</span> • Table 4
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">📅 Date/Time: {orderBeingPaid?.timestamp}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Date/Time: {orderBeingPaid?.timestamp}</p>
                 </div>
                 <button
                   onClick={() => setCheckoutOrderId(null)}
                   className="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg transition"
                 >
-                  ← Back to Menu
+                  Back to Menu
                 </button>
               </div>
 
@@ -307,15 +303,14 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Payment Methods */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select Payment Method</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'Card', label: '💳 Credit / Debit Card' },
-                    { id: 'USSD / Transfer', label: '📲 USSD / Bank Transfer' },
-                    { id: 'Apple / Google Pay', label: '🍏 Apple / Google Pay' },
-                    { id: 'Cash to Waiter', label: '💵 Cash to Waiter' },
+                    { id: 'Card', label: 'Credit / Debit Card' },
+                    { id: 'USSD / Transfer', label: 'USSD / Bank Transfer' },
+                    { id: 'Apple / Google Pay', label: 'Apple / Google Pay' },
+                    { id: 'Cash to Waiter', label: 'Cash to Waiter' },
                   ].map((method) => (
                     <button
                       key={method.id}
@@ -337,17 +332,10 @@ function IndexPage() {
                 disabled={isProcessingPayment}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black text-base shadow-lg transition flex justify-center items-center gap-2 disabled:opacity-50"
               >
-                {isProcessingPayment ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin text-xl">🌀</span> Processing Payment...
-                  </span>
-                ) : (
-                  `Pay $${orderBeingPaid?.total} & Get Exit Pass`
-                )}
+                {isProcessingPayment ? 'Processing Payment...' : `Pay $${orderBeingPaid?.total} & Get Exit Pass`}
               </button>
             </div>
           ) : (
-            /* CATALOG & TRACKER VIEW */
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <div className="flex gap-2 overflow-x-auto pb-2">
@@ -386,7 +374,6 @@ function IndexPage() {
                 </div>
               </div>
 
-              {/* Cart & Active Tracking */}
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl p-6 border shadow-sm space-y-4">
                   <div className="flex justify-between items-center border-b pb-3">
@@ -398,7 +385,6 @@ function IndexPage() {
                   </div>
                   {cart.length === 0 ? (
                     <div className="text-center py-6 text-slate-400">
-                      <p className="text-3xl mb-1">🛒</p>
                       <p className="text-xs">Select items above to start an order.</p>
                     </div>
                   ) : (
@@ -409,25 +395,21 @@ function IndexPage() {
                             <p className="font-medium text-slate-800">{cartItem.name}</p>
                             <p className="text-xs font-bold text-slate-500">${cartItem.price.toFixed(2)}</p>
                           </div>
-                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">✕</button>
+                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-slate-400 font-bold">Remove</button>
                         </div>
                       ))}
 
-                      {/* LARGE ORDER PREP TIME WARNING BANNER */}
                       {cart.length > 3 && (
-                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-900">
-                          <span className="text-base">⚠️</span>
-                          <div>
-                            <p className="font-bold">Larger Order Notice (~30 Mins Prep Time)</p>
-                            <p className="text-[11px] text-amber-800 mt-0.5">
-                              Orders with more than 3 items require additional kitchen prep time to ensure all dishes arrive hot and fresh together.
-                            </p>
-                          </div>
+                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900">
+                          <p className="font-bold">Larger Order Notice (~30 Mins Prep Time)</p>
+                          <p className="text-[11px] text-amber-800 mt-0.5">
+                            Orders with more than 3 items require additional kitchen prep time.
+                          </p>
                         </div>
                       )}
 
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center text-xs">
-                        <span className="font-medium text-amber-900">⏱️ Est. Wait Time:</span>
+                        <span className="font-medium text-amber-900">Est. Wait Time:</span>
                         <span className="font-bold text-amber-900 bg-amber-100 px-2 py-1 rounded-md">{estimatedWaitTime}</span>
                       </div>
 
@@ -446,28 +428,12 @@ function IndexPage() {
 
                 {/* DIGITAL EXIT PASS */}
                 {activeExitPass && !isExitPassMinimized && (
-                  <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 text-white shadow-2xl border-2 border-emerald-500/50 space-y-5 relative overflow-hidden">
+                  <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 text-white shadow-2xl border-2 border-emerald-500/50 space-y-5">
                     <div className="flex justify-between items-start border-b border-slate-800 pb-3">
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">CHOWLY OFFICIAL PASS</span>
                         <h3 className="text-xl font-black text-white">EXIT PASS CLEARED</h3>
                       </div>
-                      <span className="bg-emerald-500/20 text-emerald-400 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-500/40 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        PAID & CLEARED
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-2xl flex flex-col items-center justify-center gap-3 text-slate-900 border-4 border-emerald-500">
-                      <div className="relative w-36 h-36 bg-slate-950 rounded-xl p-2 flex items-center justify-center">
-                        <div className="w-full h-full border-2 border-dashed border-emerald-400/60 rounded flex items-center justify-center text-slate-700 text-[10px] text-center font-mono p-1">
-                          [VERIFIED-QR-PASS]
-                        </div>
-                        <div className="absolute w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg">
-                          ✓
-                        </div>
-                      </div>
-                      <p className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Scan at Door / Show Waiter</p>
                     </div>
 
                     <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 space-y-2 text-xs">
@@ -483,46 +449,13 @@ function IndexPage() {
                         <span>Total Paid:</span>
                         <span className="font-bold text-emerald-400">${activeExitPass.total}</span>
                       </div>
-                      <div className="flex justify-between text-slate-300 border-t border-slate-700/60 pt-2">
-                        <span>Issued:</span>
-                        <span className="font-mono text-slate-400">{activeExitPass.timestamp}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-emerald-300">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="font-bold">Live Clock:</span>
-                      </div>
-                      <span className="font-mono font-black text-white">{currentTime}</span>
                     </div>
 
                     <button
                       onClick={() => setIsExitPassMinimized(true)}
-                      className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                      className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition"
                     >
-                      <span>🔽 Minimize Exit Pass</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* MINIMIZED PASS */}
-                {activeExitPass && isExitPassMinimized && (
-                  <div className="bg-emerald-900 border-2 border-emerald-400 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-xl text-white shadow">
-                        ✓
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-emerald-300">Exit Pass Active</h4>
-                        <p className="text-xs font-bold text-white">{activeExitPass.orderIds.join(', ')} • Table 4</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIsExitPassMinimized(false)}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl text-xs font-black transition shadow"
-                    >
-                      🔍 Show Pass
+                      Minimize Exit Pass
                     </button>
                   </div>
                 )}
@@ -539,7 +472,7 @@ function IndexPage() {
                         <div className="border-b pb-3 flex justify-between items-start">
                           <div>
                             <h2 className="text-lg font-bold text-slate-900">Order Tracker</h2>
-                            <p className="text-[11px] text-slate-400 font-medium">📅 Order Date: {ord.timestamp}</p>
+                            <p className="text-[11px] text-slate-400 font-medium">Order Date: {ord.timestamp}</p>
                           </div>
                           <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">
                             {ord.id}
@@ -556,78 +489,40 @@ function IndexPage() {
                               </li>
                             ))}
                           </ul>
-                          <div className="border-t pt-1.5 mt-1.5 flex justify-between font-bold text-xs text-slate-900">
-                            <span>Total:</span>
-                            <span>${ord.total}</span>
-                          </div>
                         </div>
 
-                        {/* Status Display */}
-                        <div className={`p-4 rounded-xl border text-center space-y-2 ${
-                          ord.status === 'Completed' ? 'bg-emerald-50 border-emerald-300' :
-                          ord.isPaid ? 'bg-emerald-50 border-emerald-200' :
-                          ord.status === 'Submitted' ? 'bg-amber-50 border-amber-200' :
-                          'bg-blue-50 border-blue-200'
-                        }`}>
+                        <div className="p-4 rounded-xl border text-center space-y-2 bg-slate-50">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</span>
                           <p className="text-xl font-black text-slate-900">
                             {ord.status === 'Served' && !ord.isPaid ? 'Served (Pending Payment)' : ord.status}
                           </p>
-
-                          <div className="pt-0.5">
-                            <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-flex items-center gap-1 border border-amber-200">
-                              ⏱️ Est. Wait: {ord.prepTime}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-slate-600 pt-1">
-                            {ord.isPaid && ord.status !== 'Completed' && "✅ Bill Paid. Food in progress!"}
-                            {!ord.isPaid && ord.status === 'Submitted' && "Order received by kitchen. You can pay anytime."}
-                            {!ord.isPaid && ord.status === 'Assigned' && "Order items assigned to staff. You can pay anytime."}
-                            {!ord.isPaid && ord.status === 'Preparing' && "Food is cooking! You can pay anytime."}
-                            {!ord.isPaid && ord.status === 'Ready' && "Your order is ready!"}
-                            {!ord.isPaid && ord.status === 'Served' && "⚠️ Food served! Please pay your bill."}
-                            {ord.status === 'Completed' && "Order paid & cleared! Show Exit Pass at door."}
-                          </p>
                         </div>
 
-                        {/* Pay Button Trigger */}
                         {!ord.isPaid && ord.status !== 'Completed' && (
                           <button
                             onClick={() => setCheckoutOrderId(ord.id)}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md flex justify-center items-center gap-2"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs transition shadow-md"
                           >
-                            💳 Pay Bill Now (${ord.total})
+                            Pay Bill Now (${ord.total})
                           </button>
                         )}
 
-                        {ord.status === 'Submitted' && !ord.isPaid ? (
+                        {ord.status === 'Submitted' && !ord.isPaid && (
                           <button
                             onClick={() => handleCustomerCancel(ord.id)}
                             className="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2 rounded-xl font-bold text-xs transition"
                           >
                             Cancel Order
                           </button>
-                        ) : (
-                          ord.status !== 'Completed' && !ord.isPaid && (
-                            <p className="text-[11px] text-center text-slate-400 italic">
-                              🔒 Order in progress. Speak to your waiter for changes.
-                            </p>
-                          )
                         )}
 
                         {ord.status === 'Completed' && (
-                          <div className="space-y-2">
-                            <div className="bg-emerald-100 text-emerald-800 p-2.5 rounded-xl text-center text-xs font-bold flex items-center justify-center gap-1.5">
-                              <span>✅ Paid & Cleared</span>
-                            </div>
-                            <button
-                              onClick={() => handleDismissOrder(ord.id)}
-                              className="w-full bg-slate-100 text-slate-700 py-2 rounded-xl font-bold text-xs hover:bg-slate-200 transition"
-                            >
-                              Dismiss Tracker
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => handleDismissOrder(ord.id)}
+                            className="w-full bg-slate-100 text-slate-700 py-2 rounded-xl font-bold text-xs hover:bg-slate-200 transition"
+                          >
+                            Dismiss Tracker
+                          </button>
                         )}
                       </div>
                     ))}
@@ -653,66 +548,39 @@ function IndexPage() {
                 const allItemsAssigned = ord.items.every((it) => it.assignedStaff !== 'Unassigned');
                 const isAssignedOrBeyond = ['Assigned', 'Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
                 const isPreparingOrBeyond = ['Preparing', 'Ready', 'Served', 'Completed'].includes(ord.status);
-                const isServedUnpaid = ord.status === 'Served' && !ord.isPaid;
-                const isCompleted = ord.status === 'Completed';
+                const isReadyOrBeyond = ['Ready', 'Served', 'Completed'].includes(ord.status);
+                const isServedOrBeyond = ['Served', 'Completed'].includes(ord.status);
 
                 return (
-                  <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-4 relative">
-                    {/* Pending Payment Badge for Waiters */}
-                    {isServedUnpaid && (
-                      <div className="bg-amber-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-md flex items-center gap-1.5 animate-pulse w-fit">
-                        <span>💳</span>
-                        <span>PENDING PAYMENT</span>
+                  <div key={ord.id} className="bg-white rounded-2xl p-6 border shadow-sm space-y-5 flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start border-b pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-extrabold text-slate-900 text-lg">{ord.id}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-slate-100 text-slate-800">
+                              {ord.isPaid ? 'PAID' : 'UNPAID'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">{ord.customer} • {ord.table}</p>
+                        </div>
+                        <span className="text-xl font-black text-slate-900">${ord.total}</span>
                       </div>
-                    )}
 
-                    <div className="flex justify-between border-b pb-3">
-                      <div>
-                        <span className="text-xs font-bold text-slate-400">{ord.id}</span>
-                        <h3 className="text-lg font-bold text-slate-900">{ord.customer}</h3>
-                        <p className="text-[11px] text-slate-400 font-medium">📅 Ordered: {ord.timestamp}</p>
-                        {ord.paymentMethod && (
-                          <p className="text-[11px] font-bold text-emerald-600 mt-0.5">
-                            💳 Paid via {ord.paymentMethod}
-                          </p>
-                        )}
-                      </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md h-fit ${
-                        isCompleted ? 'bg-emerald-100 text-emerald-800' :
-                        isServedUnpaid ? 'bg-amber-100 text-amber-900 border border-amber-300' :
-                        ord.status === 'Ready' ? 'bg-teal-100 text-teal-800' :
-                        ord.status === 'Preparing' ? 'bg-blue-100 text-blue-800' :
-                        ord.status === 'Assigned' ? 'bg-purple-100 text-purple-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
-                        {isServedUnpaid ? 'Served (Unpaid)' : ord.status}
-                      </span>
-                    </div>
-
-                    {/* Employee Role Assignment Table */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Order Items & Staff Role Assignment</p>
-                      <div className="bg-slate-50 rounded-xl p-3 border space-y-3">
-                        {ord.items.map((it) => {
-                          const isDrink = it.category === 'Drinks';
-                          const staffOptions = isDrink ? BARTENDER_OPTIONS : CHEF_OPTIONS;
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase">Item Assignment</h3>
+                        {ord.items.map((item) => {
+                          const staffOptions = item.category === 'Drinks' ? BARTENDER_OPTIONS : CHEF_OPTIONS;
 
                           return (
-                            <div key={it.id} className="flex items-center justify-between gap-2 border-b last:border-b-0 pb-2 last:pb-0">
-                              <div className="flex-1">
-                                <span className="text-xs font-semibold text-slate-800 block">{it.name}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">
-                                  {it.category} ({isDrink ? 'Bartender' : 'Chef'})
-                                </span>
-                              </div>
-
+                            <div key={item.id} className="bg-slate-50 p-3 rounded-xl border flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-800">{item.name}</span>
                               <select
-                                value={it.assignedStaff}
-                                disabled={isPreparingOrBeyond}
-                                onChange={(e) => handleAssignItemStaff(ord.id, it.id, e.target.value)}
-                                className="bg-white border text-xs rounded-lg p-1.5 font-bold text-slate-700 shadow-sm outline-none disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                                value={item.assignedStaff}
+                                onChange={(e) => handleAssignItemStaff(ord.id, item.id, e.target.value)}
+                                className="bg-white border rounded text-xs font-bold p-1 text-slate-700"
                               >
-                                <option value="Unassigned">Assign Role...</option>
+                                <option value="Unassigned">-- Select --</option>
                                 {staffOptions.map((code) => (
                                   <option key={code} value={code}>{code}</option>
                                 ))}
@@ -723,46 +591,36 @@ function IndexPage() {
                       </div>
                     </div>
 
-                    {/* Waiter Status Control */}
-                    <div className="pt-3 border-t">
-                      <label className="text-xs font-bold text-slate-600 block mb-1">Update Order Status:</label>
-                      <select
-                        value={ord.status}
-                        disabled={isCompleted}
-                        onChange={(e) => handleUpdateStatus(ord.id, e.target.value)}
-                        className="w-full bg-slate-50 border text-sm rounded-xl p-2.5 font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    <div className="border-t pt-4 grid grid-cols-2 gap-2">
+                      <button
+                        disabled={!allItemsAssigned || isAssignedOrBeyond}
+                        onClick={() => handleUpdateStatus(ord.id, 'Assigned')}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-blue-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
                       >
-                        <option value="Submitted">Submitted (Pending Assignment)</option>
-
-                        <option value="Assigned" disabled={!allItemsAssigned}>
-                          Assigned {!allItemsAssigned ? '(Assign all items first)' : ''}
-                        </option>
-
-                        <option value="Preparing" disabled={!isAssignedOrBeyond}>
-                          Preparing {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
-                        </option>
-
-                        <option value="Ready" disabled={!isAssignedOrBeyond}>
-                          Ready {!isAssignedOrBeyond ? '(Must set to Assigned first)' : ''}
-                        </option>
-
-                        <option value="Served" disabled={!isAssignedOrBeyond}>
-                          Served (Awaits Customer Payment)
-                        </option>
-
-                        <option value="Completed" disabled={!allItemsAssigned}>
-                          Completed (Paid & Cleared) {!allItemsAssigned ? '(Assign all items first)' : ''}
-                        </option>
-
-                        <option value="Cancelled">Cancelled (Void)</option>
-                      </select>
+                        1. Confirm Staff
+                      </button>
+                      <button
+                        disabled={ord.status !== 'Assigned' && !isPreparingOrBeyond}
+                        onClick={() => handleUpdateStatus(ord.id, 'Preparing')}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        2. Start Cooking
+                      </button>
+                      <button
+                        disabled={ord.status !== 'Preparing' && !isReadyOrBeyond}
+                        onClick={() => handleUpdateStatus(ord.id, 'Ready')}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-indigo-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        3. Mark Ready
+                      </button>
+                      <button
+                        disabled={ord.status !== 'Ready' && !isServedOrBeyond}
+                        onClick={() => handleUpdateStatus(ord.id, 'Served')}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 text-white disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        4. Serve to Table
+                      </button>
                     </div>
-
-                    {isCompleted && (
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-center text-xs font-bold">
-                        🔒 Order Completed & Paid — Lock Applied
-                      </div>
-                    )}
                   </div>
                 );
               })}
